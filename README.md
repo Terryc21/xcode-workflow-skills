@@ -1,5 +1,8 @@
 # Xcode Workflow Skills for Claude Code
 
+![Visitors](https://visitor-badge.laobi.icu/badge?page_id=Terryc21.xcode-workflow-skills)
+![GitHub stars](https://img.shields.io/github/stars/Terryc21/xcode-workflow-skills?style=social)
+
 A collection of Claude Code skills optimized for iOS/macOS development with Xcode.
 
 ## Installation
