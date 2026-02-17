@@ -7,9 +7,28 @@ description: Technical codebase analysis with A-F grades for architecture, secur
 
 Generate a comprehensive technical report card for developers and technical stakeholders.
 
-## Step 1: Initial Setup
+## Step 1: Initial Question
 
-Read CLAUDE.md at the repo root first and summarize its key points in 3-5 bullets.
+**IMPORTANT**: Before reading any files, ask the user about CLAUDE.md:
+
+```
+AskUserQuestion with questions:
+[
+  {
+    "question": "Should the analysis consider CLAUDE.md project instructions?",
+    "header": "CLAUDE.md",
+    "options": [
+      {"label": "Yes, use CLAUDE.md (Recommended)", "description": "Include project context, coding standards, and preferences from CLAUDE.md"},
+      {"label": "No, ignore CLAUDE.md", "description": "Perform unbiased analysis without project-specific instructions - useful for fresh perspective or when CLAUDE.md may contain outdated guidance"}
+    ],
+    "multiSelect": false
+  }
+]
+```
+
+**If user selects "Yes":** Read CLAUDE.md at the repo root and summarize its key points in 3-5 bullets. Use these guidelines throughout the analysis.
+
+**If user selects "No":** Skip reading CLAUDE.md entirely. Analyze the codebase purely on its technical merits without project-specific context. Note in the report that CLAUDE.md was intentionally excluded.
 
 Invoke `/axiom` for iOS and macOS-specific analysis patterns.
 
@@ -112,7 +131,7 @@ Based on the user's "Mode" selection:
 - Backend (if applicable)
 
 **Quiet (sequential):** Use direct `Read`, `Glob`, `Grep` tools in sequence:
-1. Read CLAUDE.md and key config files
+1. Read CLAUDE.md (if not ignored) and key config files
 2. Glob for file counts (`**/*.swift`, `**/Tests/**/*.swift`)
 3. Grep for patterns (god classes, deprecated APIs, security markers)
 4. Read sample files from each category
@@ -120,10 +139,13 @@ Based on the user's "Mode" selection:
 
 ## Step 5: Output Format
 
-### CLAUDE.md Summary
+### CLAUDE.md Summary (if included)
 - Bullet 1
 - Bullet 2
 - Bullet 3
+
+*If CLAUDE.md was ignored, display instead:*
+> **Note:** CLAUDE.md was excluded from this analysis per user request. Findings are based purely on technical assessment without project-specific context.
 
 ### Project Metrics
 
