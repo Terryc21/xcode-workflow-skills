@@ -11,7 +11,7 @@ Generate a comprehensive technical report card for developers and technical stak
 
 Read CLAUDE.md at the repo root first and summarize its key points in 3-5 bullets.
 
-Invoke `/axiom` for iOS-specific analysis patterns.
+Invoke `/axiom` for iOS and macOS-specific analysis patterns.
 
 ## Step 2: Codebase Exploration
 
@@ -236,3 +236,7 @@ AskUserQuestion with questions:
 ```
 
 If user selects yes, invoke `/implementation-plan` with the selected items.
+
+## Acknowledgments
+
+This command integrates with [Axiom](https://github.com/codeium/axiom) for iOS and macOS development analysis patterns.

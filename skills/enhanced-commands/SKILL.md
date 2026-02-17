@@ -1,11 +1,11 @@
 ---
 name: enhanced-commands
-description: Enhanced list of custom Claude commands for Stuffolio iOS project with detailed prompts, parameters, and examples.
+description: Enhanced list of custom Claude commands for iOS and macOS Swift projects with detailed prompts, parameters, and examples.
 ---
 
 Display the following command reference to the user:
 
-# Enhanced Stuffolio Commands
+# Enhanced Commands
 
 Commands are grouped by category for easier navigation. Each includes:
 - **Parameters**: Required/optional flags.
@@ -90,4 +90,8 @@ All report card and implementation plan commands now include:
 - **Modular Use**: Save each "Details" section as `[command].md` for direct Claude loading.
 - **Swift 6.2**: `/migrate-schema` invokes `/axiom` for concurrency.
 - **Validation**: All prompts check inputs (e.g., "If no path, scan repo root").
-- **Extensibility**: Use `/axiom` for iOS patterns. Add `/validate-skills` meta-command: "Test all commands on sample code."
+- **Extensibility**: Use `/axiom` for iOS and macOS patterns. Add `/validate-skills` meta-command: "Test all commands on sample code."
+
+## Acknowledgments
+
+These commands integrate with [Axiom](https://github.com/codeium/axiom) for iOS and macOS development patterns, including SwiftUI, SwiftData, concurrency, and Apple platform best practices.
