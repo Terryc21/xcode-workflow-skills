@@ -28,7 +28,7 @@ AskUserQuestion with questions:
     "header": "Backend",
     "options": [
       {"label": "Yes", "description": "Include Cloudflare Worker endpoints, rate limiting, and validation in analysis"},
-      {"label": "No", "description": "Skip backend analysis, focus on iOS app only"}
+      {"label": "No", "description": "Skip backend analysis, focus on the app only"}
     ],
     "multiSelect": false
   },
@@ -39,7 +39,7 @@ AskUserQuestion with questions:
       {"label": "Grade everything", "description": "Full analysis with no exclusions"},
       {"label": "Skip file size/LOC counts", "description": "Don't grade based on lines of code"},
       {"label": "Skip test coverage", "description": "Don't analyze test files"},
-      {"label": "Skip backend/Worker.js", "description": "Focus only on Swift/iOS code"}
+      {"label": "Skip backend/Worker.js", "description": "Focus only on Swift code"}
     ],
     "multiSelect": true
   },
@@ -102,7 +102,7 @@ Scan the codebase for:
 
 1. **Architecture & Code Organization** - Project structure, separation of concerns, design patterns
 2. **UI/UX Implementation** - SwiftUI views, components, navigation, accessibility
-3. **iOS-Specific UI** - iPad/iPhone adaptation, widgets, system integration
+3. **Platform-Specific UI** - iPad/iPhone/Mac adaptation, widgets, system integration
 4. **Security** - Authentication, data storage, network security, API keys, privacy
 5. **Data Architecture** - SwiftData models, relationships, persistence
 6. **User Workflows** - Item creation, search, sync, bulk operations
