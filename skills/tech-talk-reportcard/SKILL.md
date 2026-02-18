@@ -5,6 +5,8 @@ description: Technical codebase analysis with A-F grades for architecture, secur
 
 # Tech-Talk Report Card Generator
 
+**Required output:** Every issue/finding MUST include Urgency, Risk, ROI, and Blast Radius ratings. Do not omit these ratings.
+
 Generate a comprehensive technical report card for developers and technical stakeholders.
 
 ## Step 1: Initial Question

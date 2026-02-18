@@ -5,6 +5,8 @@ description: Structured implementation planning with file impact analysis, depen
 
 # Implementation Plan Generator
 
+**Required output:** Every task/issue MUST include Urgency, Risk, ROI, and Blast Radius ratings. Do not omit these ratings.
+
 Create detailed implementation plans with impact analysis, phased tasks, and risk assessment.
 
 ## Step 1: Interactive Input
