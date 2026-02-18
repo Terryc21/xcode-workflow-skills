@@ -1,0 +1,11 @@
+# macOS
+.DS_Store
+
+# Third-party skills (not created by us)
+skills/app-store-code-review/
+skills/flashcard-generator/
+skills/humanizer/
+
+# Editor
+*.swp
+*~
