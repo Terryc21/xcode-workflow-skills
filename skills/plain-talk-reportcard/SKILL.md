@@ -5,6 +5,8 @@ description: Codebase analysis with A-F grades and plain-language summaries for 
 
 # Plain-Talk Report Card Generator
 
+**Required output:** Every issue/finding MUST include Urgency, Risk, ROI, and Blast Radius ratings. Do not omit these ratings. For non-technical audiences, briefly explain what each rating means.
+
 Generate a comprehensive codebase report card with findings explained in plain, non-technical language.
 
 ## Step 1: Interactive Questions
