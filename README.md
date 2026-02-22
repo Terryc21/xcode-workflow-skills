@@ -37,6 +37,7 @@ rm -rf /tmp/xws
 |-------|---------|-------------|
 | tech-talk-reportcard | `/tech-talk-reportcard` | Technical codebase analysis with A-F grades for developers |
 | plain-talk-reportcard | `/plain-talk-reportcard` | Codebase analysis with plain-language summaries for non-technical stakeholders |
+| dead-code-scanner | `/dead-code` | Find unused code after refactors or as ongoing hygiene |
 | scan-similar-bugs | `/scan-similar-bugs` | Find similar bug patterns codebase-wide after a fix |
 | review-changes | `/review-changes` | Pre-commit review of staged changes |
 
