@@ -1,0 +1,23 @@
+# .dead-code-history.yaml
+# Auto-maintained by dead-code-scanner skill
+# Tracks false positives to improve future scans
+#
+# DO NOT manually edit unless correcting an error.
+# The skill updates this file when you mark items as false positives.
+
+false_positives: []
+  # Example entry (auto-generated):
+  # - symbol: "configureAppearance"
+  #   file: "Sources/App/AppDelegate.swift"
+  #   line: 45
+  #   flagged_date: "2026-02-22"
+  #   reason: "Called via UIAppearance proxy - runtime invocation"
+  #   scan_mode: "quick"
+  #   added_to_ignore: true
+
+# Statistics (auto-updated)
+stats:
+  total_scans: 0
+  total_symbols_removed: 0
+  total_false_positives: 0
+  last_scan: null
