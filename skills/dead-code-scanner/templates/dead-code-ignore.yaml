@@ -1,0 +1,84 @@
+# .dead-code-ignore
+# Configuration file for dead-code-scanner skill
+# Place this file in your project root
+#
+# Symbols and patterns listed here will be excluded from dead code reports.
+# Use this for known false positives and intentionally "unused" code.
+
+# =============================================================================
+# FILE EXCLUSIONS
+# Entire files or directories to skip
+# =============================================================================
+files:
+  # App Intents - invoked by Siri/Shortcuts, not direct code calls
+  - path: "Sources/**/Intents/*.swift"
+    reason: "App Intents - invoked by Siri/Shortcuts"
+
+  # Widgets - system invokes these entry points
+  - path: "Sources/**/Widgets/*.swift"
+    reason: "Widget extensions - invoked by system"
+
+  # Intent handlers
+  - path: "**/*Intent.swift"
+    reason: "Intent handlers - system invoked"
+
+  # Live Activities
+  - path: "**/*LiveActivity*.swift"
+    reason: "Live Activity extensions"
+
+  # Uncomment if building a framework with public API:
+  # - path: "Sources/PublicAPI/*"
+  #   reason: "Public framework interface - used by consumers"
+
+# =============================================================================
+# SYMBOL EXCLUSIONS
+# Specific named symbols to ignore
+# =============================================================================
+symbols: []
+  # Example:
+  # - name: "legacyMigrationHelper"
+  #   reason: "Called via reflection during migration"
+  #
+  # - name: "DebugMenuViewController"
+  #   reason: "Only instantiated in debug builds via string"
+
+# =============================================================================
+# PATTERN EXCLUSIONS
+# Regex patterns matching code that should be ignored
+# =============================================================================
+patterns:
+  # Objective-C exposed methods (runtime access)
+  - regex: "@objc\\s+(dynamic\\s+)?func"
+    reason: "Objective-C exposed for runtime access"
+
+  # Interface Builder connections
+  - regex: "@IBAction\\s+func"
+    reason: "Interface Builder actions"
+  - regex: "@IBOutlet"
+    reason: "Interface Builder outlets"
+
+  # SwiftUI previews
+  - regex: "#Preview\\s*\\{"
+    reason: "SwiftUI preview blocks - needed for Xcode"
+
+  # Codable implementations
+  - regex: "enum\\s+CodingKeys"
+    reason: "Codable synthesis"
+
+  # Combine cancellables (stored but not "called")
+  - regex: "var\\s+cancellables.*Set<AnyCancellable>"
+    reason: "Combine subscription storage"
+
+# =============================================================================
+# NOTES
+# =============================================================================
+#
+# You can also use inline annotations in code:
+#
+#   // dead-code:ignore - Called via reflection
+#   private func dynamicHandler() { }
+#
+#   // dead-code:ignore:until:2026-06-01 - Migration period
+#   func migrateV2ToV3() { }
+#
+# These will be automatically detected and excluded from reports.
