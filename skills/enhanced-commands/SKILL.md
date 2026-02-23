@@ -1,6 +1,13 @@
 ---
 name: enhanced-commands
 description: Enhanced list of custom Claude commands for iOS and macOS Swift projects with detailed prompts, parameters, and examples.
+version: 1.0.0
+author: Terry Nyberg
+license: MIT
+allowed-tools: [Read]
+metadata:
+  tier: reference
+  category: reference
 ---
 
 Display the following command reference to the user:
@@ -10,32 +17,48 @@ Display the following command reference to the user:
 Commands are grouped by category for easier navigation. Each includes:
 - **Parameters**: Required/optional flags.
 - **Example**: Sample usage.
-- **Prompt Template**: Core Claude instruction (copy to sub-files for modularity).
+- **Output**: Where results are saved.
 
 ## Code Analysis & Review
+
 | Command | Description |
 |---------|-------------|
 | `/tech-talk-reportcard` | Technical codebase analysis with A-F grades (architecture, security, performance, etc.) for developers. |
 | `/plain-talk-reportcard` | Codebase analysis with A-F grades and plain-language summaries for non-technical stakeholders. |
 | `/scan-similar-bugs` | Find similar bug patterns codebase-wide after a fix. |
 | `/review-changes` | Pre-commit review of staged changes for bugs, style, tests. |
+| `/dead-code-scanner` | Find unused code after refactors or as ongoing hygiene. |
 
 **`/tech-talk-reportcard` Details**
 - Parameters: `[path]` (default: entire repo), `--focus=security`
 - Example: `/tech-talk-reportcard Sources/ --focus=performance`
+- Output: `.agents/research/YYYY-MM-DD-tech-reportcard.md`
 - Features: Interactive questions before analysis, table-formatted output, prioritized issues with Urgency/Risk/ROI ratings.
 
-**`/plain-talk-reportcard` Details**
-- Parameters: none
-- Example: `/plain-talk-reportcard`
-- Features: Interactive questions, plain-language explanations, action items explained for non-technical stakeholders. Optionally generates `/implementation-plan`.
+**`/security-audit` Details**
+- Parameters: `--quick` (surface only), `--focus=secrets|storage|network|privacy`
+- Example: `/security-audit --focus=secrets`
+- Output: `.agents/research/YYYY-MM-DD-security-audit.md`
+- Features: Automated grep patterns, severity scoring (CRITICAL/HIGH/MEDIUM/LOW), remediation code examples, Privacy Manifest validation.
+
+**`/performance-check` Details**
+- Parameters: `--quick` (surface only), `--focus=memory|cpu|energy|swiftui|launch`
+- Example: `/performance-check --focus=memory`
+- Output: `.agents/research/YYYY-MM-DD-performance-check.md`
+- Features: Automated anti-pattern detection, Instruments integration suggestions, before/after code examples.
+
+**`/dead-code-scanner` Details**
+- Parameters: `quick` (recent changes), `full` (entire codebase), `remove` (with verification)
+- Example: `/dead-code quick`, `/dead-code remove --verify-with-tests`
+- Output: `.agents/research/YYYY-MM-DD-dead-code-*.md`
+- Features: Build + test verification before removal, allowlist support, false positive tracking.
 
 ## Planning & Refactoring
+
 | Command | Description |
 |---------|-------------|
 | `/implementation-plan` | Implementation planning with file impacts, deps, phases, and interactive questions. |
 | `/safe-refactor` | Refactor plan with blast radius, deps, rollback. |
-| `/migrate-schema` | SwiftData migration with data preservation. |
 
 **`/implementation-plan` Details**
 - Parameters: `feature-name`, `--phase=1`
@@ -43,55 +66,72 @@ Commands are grouped by category for easier navigation. Each includes:
 - Features: Interactive questions for work type/risk/timeline, table-formatted impact analysis, phased task lists, risk assessment, rollback strategy.
 
 ## Debugging & Testing
+
 | Command | Description |
 |---------|-------------|
 | `/debug` | Systematic debug: reproduce, isolate, hypothesize, fix. |
-| `/generate-tests` | Unit/UI tests with edges, mocks. |
+| `/generate-tests` | Unit/UI tests with edges, mocks. Auto-detects Swift Testing vs XCTest. |
 | `/run-tests` | Smart test runs, supports `--unattended`. |
 | `/ui-scan` | UI setup with onboarding bypass, accessibility scan. |
 
 **`/debug` Details**
 - Parameters: `issue-description`, `[file]`
 - Example: `/debug "Crash on login" AuthView.swift`
-- Prompt Template: "Debug [issue] in [file]: 1. Reproduce steps. 2. Isolate (logs, breakpoints). 3. Hypothesize causes. 4. Verify fix. Output structured steps + code patch."
+- Features: Hypothesis table, root cause analysis, similar bug scan integration.
 
-## Security & Performance
-| Command | Description |
-|---------|-------------|
-| `/security-audit` | Scan API keys, storage, network, privacy. |
-| `/performance-check` | Profile memory/CPU/energy/launch. |
+**`/generate-tests` Details**
+- Parameters: `TypeName` or `path/to/File.swift`, `--ui` for UI tests
+- Example: `/generate-tests ItemViewModel`, `/generate-tests --ui ItemListView`
+- Features: Auto-detects test framework (Swift Testing or XCTest), generates mocks, covers edge cases.
 
-**`/security-audit` Details**
-- Parameters: `--quick` (surface only)
-- Example: `/security-audit`
-- Prompt Template: "Audit Stuffolio for: hardcoded keys, insecure storage, network (TLS), permissions, Info.plist privacy. List findings, severity (CVSS), fixes. Cross-check with App Privacy manifest."
+**`/run-tests` Details**
+- Parameters: `--split` (UI sequential + unit parallel), `--sequential`, `--parallel`, `--unattended`
+- Example: `/run-tests --unattended --cleanup`
+- Features: Smart split strategy for stability, unattended mode for hands-off execution.
 
-## Release & Explain
+## Release & Deployment
+
 | Command | Description |
 |---------|-------------|
 | `/release-prep` | Checklist: version, changelog, metadata. |
+| `/release-screenshots` | Capture App Store screenshots across all required device sizes. |
+| `/update-website` | Sync website content with app codebase. |
 | `/explain` | Deep-dive on file/feature/data flow. |
-| `/commands` | Show this list. |
 
 **`/release-prep` Details**
-- Parameters: `--bump=major`
+- Parameters: `--bump=major|minor|patch`
 - Example: `/release-prep --bump=minor`
-- Prompt Template: "Prep Stuffolio release: Bump version [bump], generate changelog from git, list known issues, update store metadata. Output checklist Markdown."
+- Features: Version bump, changelog generation, App Store metadata checklist.
+
+**`/release-screenshots` Details**
+- Parameters: (interactive)
+- Example: `/release-screenshots`
+- Features: Multi-device capture (6.9", 6.5", 5.5"), status bar override, organized folder output.
 
 ## Interactive Features
 
-All report card and implementation plan commands now include:
+All analysis commands include:
 
 1. **Interactive Questions**: Use `AskUserQuestion` tool to gather context before analysis
 2. **Table Format Output**: All findings presented in structured tables
-3. **Follow-up Actions**: Option to generate implementation plans from report card findings
+3. **Output Files**: Reports saved to `.agents/research/` for future reference
+4. **Follow-up Actions**: Option to generate implementation plans or fixes from findings
+
+## Axiom Integration
+
+For iOS-specific deep dives, commands invoke Axiom skills:
+
+| Command | Axiom Skills Invoked |
+|---------|---------------------|
+| `/security-audit` | `axiom-security-privacy-scanner`, `axiom-storage`, `axiom-networking` |
+| `/performance-check` | `axiom-swift-performance`, `axiom-swiftui-performance`, `axiom-memory-debugging`, `axiom-energy` |
+| `/debug` | `axiom-memory-debugging`, `axiom-hang-diagnostics`, `axiom-swiftui-debugging` |
+| `/generate-tests` | `axiom-swift-testing`, `axiom-testing-async`, `axiom-xctest-automation` |
+
+For schema migrations, use Axiom directly: `/axiom:axiom-swiftdata-migration`
 
 ## Notes
-- **Modular Use**: Save each "Details" section as `[command].md` for direct Claude loading.
-- **Swift 6.2**: `/migrate-schema` invokes `/axiom` for concurrency.
+
+- **Execution directives**: All workflow skills include "YOU MUST EXECUTE THIS WORKFLOW" to ensure action, not just description.
 - **Validation**: All prompts check inputs (e.g., "If no path, scan repo root").
-- **Extensibility**: Use `/axiom` for iOS and macOS patterns. Add `/validate-skills` meta-command: "Test all commands on sample code."
-
-## Acknowledgments
-
-These commands integrate with [Axiom](https://github.com/codeium/axiom) for iOS and macOS development patterns, including SwiftUI, SwiftData, concurrency, and Apple platform best practices.
+- **Output standardization**: Analysis skills write to `.agents/research/YYYY-MM-DD-*.md`.

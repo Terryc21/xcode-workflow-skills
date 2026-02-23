@@ -1,6 +1,13 @@
 ---
 name: release-screenshots
 description: Capture App Store screenshots across all required device sizes using XcodeBuildMCP automation
+version: 1.0.0
+author: Terry Nyberg
+license: MIT
+allowed-tools: [mcp__XcodeBuildMCP, Bash]
+metadata:
+  tier: execution
+  category: release
 ---
 
 # Release Screenshots

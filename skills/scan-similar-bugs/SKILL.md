@@ -1,10 +1,13 @@
 ---
 name: scan-similar-bugs
 description: 'After fixing a bug, systematically find other instances of the same pattern. Triggers: "scan for similar bugs", "find other instances", "check for similar issues", "scan similar bugs".'
+version: 1.0.0
+author: Terry Nyberg
+license: MIT
+allowed-tools: [Grep, Glob, Read, AskUserQuestion]
 metadata:
   tier: execution
-  dependencies:
-    - bug-hunt  # for bug pattern identification
+  category: debugging
 ---
 
 # Scan Similar Bugs Skill
@@ -226,3 +229,10 @@ Summarize findings:
 | Too many false positives | Refine search pattern, add context checks |
 | Can't infer bug from session | Ask user to describe the pattern instead |
 | Pattern too broad | Ask user to narrow scope (specific files/dirs) |
+
+---
+
+## See Also
+
+- `/debug` - Systematic debugging workflow
+- `/dead-code-scanner` - Find unused code (complementary cleanup)

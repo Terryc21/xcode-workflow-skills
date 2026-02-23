@@ -1,6 +1,13 @@
 ---
 name: run-tests
 description: Run tests with smart execution strategies - parallel, sequential, or split (UI sequential + unit parallel)
+version: 1.0.0
+author: Terry Nyberg
+license: MIT
+allowed-tools: [mcp__XcodeBuildMCP, Bash]
+metadata:
+  tier: execution
+  category: testing
 ---
 
 # Run Tests
@@ -168,3 +175,10 @@ Common UI test target patterns:
 - `<AppName>UITests`
 - `<AppName>-UITests`
 - `UITests`
+
+---
+
+## See Also
+
+- `/generate-tests` - Generate new tests before running
+- `/ui-scan` - Set up UI test environment with onboarding bypass

@@ -1,6 +1,13 @@
 ---
 name: tech-talk-reportcard
 description: Technical codebase analysis with A-F grades for architecture, security, performance, code quality, UI, testing, and tooling
+version: 1.0.0
+author: Terry Nyberg
+license: MIT
+allowed-tools: [Task, Glob, Grep, Read, AskUserQuestion]
+metadata:
+  tier: analysis
+  category: analysis
 ---
 
 # Tech-Talk Report Card Generator
@@ -260,6 +267,22 @@ AskUserQuestion with questions:
 ```
 
 If user selects yes, invoke `/implementation-plan` with the selected items.
+
+---
+
+## Output
+
+Write the report card to `.agents/research/YYYY-MM-DD-tech-reportcard.md` for future reference.
+
+---
+
+## See Also
+
+- `/plain-talk-reportcard` - Non-technical version for stakeholders
+- `/performance-check` - Deeper performance analysis
+- `/security-audit` - Deeper security analysis
+
+---
 
 ## Acknowledgments
 

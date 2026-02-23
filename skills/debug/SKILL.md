@@ -1,9 +1,18 @@
 ---
 name: debug
 description: Systematic debugging workflow - reproduce, isolate, hypothesize, verify, and fix
+version: 1.0.0
+author: Terry Nyberg
+license: MIT
+allowed-tools: [Read, Grep, Glob, Bash, AskUserQuestion]
+metadata:
+  tier: execution
+  category: debugging
 ---
 
 # Debug
+
+**YOU MUST EXECUTE THIS WORKFLOW. Do not just describe it.**
 
 Systematic debugging workflow: reproduce, isolate, hypothesize, verify, and fix.
 
@@ -77,3 +86,20 @@ Test each hypothesis starting with most likely:
 
 ### Step 9: Similar Bugs
 After fixing, use `/scan-similar-bugs` to find other occurrences of this pattern.
+
+---
+
+## For iOS-Specific Debugging
+
+This skill focuses on workflow orchestration. For deep iOS-specific debugging:
+
+- **Memory debugging:** Invoke `/axiom:axiom-memory-debugging`
+- **Hang diagnostics:** Invoke `/axiom:axiom-hang-diagnostics`
+- **SwiftUI debugging:** Invoke `/axiom:axiom-swiftui-debugging`
+
+---
+
+## See Also
+
+- `/scan-similar-bugs` - Find similar bug patterns after fixing
+- `/review-changes` - Review the fix before committing

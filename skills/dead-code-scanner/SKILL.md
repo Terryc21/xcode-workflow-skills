@@ -1,9 +1,13 @@
 ---
 name: dead-code-scanner
 description: 'Find unused code after refactors or as ongoing hygiene. Two modes: quick (post-refactor, recent changes) and full (entire codebase). Triggers: "find dead code", "find unused code", "cleanup unused", "dead code scan", "code hygiene".'
+version: 1.0.0
+author: Terry Nyberg
+license: MIT
+allowed-tools: [Grep, Glob, Read, Bash, Edit, AskUserQuestion]
 metadata:
   tier: execution
-  dependencies: []
+  category: analysis
 ---
 
 # Dead Code Scanner Skill
