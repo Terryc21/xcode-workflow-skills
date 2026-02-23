@@ -1,6 +1,13 @@
 ---
 name: ui-scan
 description: UI test environment setup and accessibility scan with recommendations for splash/onboarding bypass
+version: 1.0.0
+author: Terry Nyberg
+license: MIT
+allowed-tools: [mcp__XcodeBuildMCP, Grep, Read]
+metadata:
+  tier: execution
+  category: testing
 ---
 
 # UI Scan

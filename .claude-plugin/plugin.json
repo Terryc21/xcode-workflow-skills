@@ -1,0 +1,11 @@
+{
+  "name": "xcode-workflow-skills",
+  "version": "1.0.0",
+  "description": "Xcode development workflow skills - testing, debugging, refactoring, release prep, and code analysis",
+  "author": {
+    "name": "Terry Nyberg"
+  },
+  "repository": "https://github.com/Terryc21/xcode-workflow-skills",
+  "license": "MIT",
+  "keywords": ["xcode", "ios", "swift", "testing", "debugging", "workflow"]
+}

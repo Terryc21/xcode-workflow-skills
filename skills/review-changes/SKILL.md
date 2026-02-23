@@ -1,9 +1,18 @@
 ---
 name: review-changes
 description: Pre-commit review of staged changes for bugs, style issues, and missing tests
+version: 1.0.0
+author: Terry Nyberg
+license: MIT
+allowed-tools: [Bash, Glob, Grep, Read]
+metadata:
+  tier: execution
+  category: analysis
 ---
 
 # Review Changes
+
+**YOU MUST EXECUTE THIS WORKFLOW. Do not just describe it.**
 
 Pre-commit review of staged/modified changes for bugs, style issues, and missing tests.
 
@@ -62,3 +71,11 @@ Pre-commit review of staged/modified changes for bugs, style issues, and missing
 ### Approval
 If no issues: "✅ Changes look good. Ready to commit."
 If issues found: "⚠️ Found X issues. Please address before committing."
+
+---
+
+## See Also
+
+- `/debug` - When review reveals a bug that needs investigation
+- `/security-audit` - For deeper security analysis
+- `/scan-similar-bugs` - After fixing an issue found during review

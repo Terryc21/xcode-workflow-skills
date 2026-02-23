@@ -1,6 +1,13 @@
 ---
 name: implementation-plan
 description: Structured implementation planning with file impact analysis, dependencies, and phased tasks
+version: 1.0.0
+author: Terry Nyberg
+license: MIT
+allowed-tools: [Glob, Grep, Read, AskUserQuestion]
+metadata:
+  tier: analysis
+  category: refactoring
 ---
 
 # Implementation Plan Generator

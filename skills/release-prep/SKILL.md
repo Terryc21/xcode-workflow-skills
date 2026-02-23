@@ -1,9 +1,18 @@
 ---
 name: release-prep
 description: Pre-release checklist including version bump, changelog, known issues, and store metadata
+version: 1.0.0
+author: Terry Nyberg
+license: MIT
+allowed-tools: [Read, Bash, AskUserQuestion]
+metadata:
+  tier: execution
+  category: release
 ---
 
 # Release Prep
+
+**YOU MUST EXECUTE THIS WORKFLOW. Do not just describe it.**
 
 Pre-release checklist including version bump, changelog, known issues, and store metadata.
 
@@ -72,3 +81,11 @@ Pre-release checklist including version bump, changelog, known issues, and store
 - [ ] Verify app live
 - [ ] Monitor crash reports (48 hours)
 - [ ] Monitor reviews
+
+---
+
+## See Also
+
+- `/release-screenshots` - Capture App Store screenshots
+- `/update-website` - Sync website with app changes
+- `/security-audit` - Pre-release security verification

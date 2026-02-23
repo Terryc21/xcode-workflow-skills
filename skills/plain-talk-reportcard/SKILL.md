@@ -1,6 +1,13 @@
 ---
 name: plain-talk-reportcard
 description: Codebase analysis with A-F grades and plain-language summaries for non-technical stakeholders
+version: 1.0.0
+author: Terry Nyberg
+license: MIT
+allowed-tools: [Task, Glob, Grep, Read, AskUserQuestion]
+metadata:
+  tier: analysis
+  category: analysis
 ---
 
 # Plain-Talk Report Card Generator
@@ -199,3 +206,16 @@ AskUserQuestion with questions:
 ```
 
 If user selects yes, invoke `/implementation-plan` with the selected items.
+
+---
+
+## Output
+
+Write the report card to `.agents/research/YYYY-MM-DD-plain-reportcard.md` for future reference.
+
+---
+
+## See Also
+
+- `/tech-talk-reportcard` - Technical version for developers
+- `/implementation-plan` - Create action plans from report findings

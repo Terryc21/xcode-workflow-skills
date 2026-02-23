@@ -1,11 +1,24 @@
 ---
 name: explain
 description: Deep-dive explanation of how a specific file, feature, or data flow works
+version: 1.0.0
+author: Terry Nyberg
+license: MIT
+allowed-tools: [Read, Grep, Glob, LSP]
+metadata:
+  tier: reference
+  category: analysis
 ---
 
 # Explain
 
+> **Quick Ref:** Deep-dive explanation with code walkthrough. Output: `.agents/research/YYYY-MM-DD-explain-{topic}.md`
+
+**YOU MUST EXECUTE THIS WORKFLOW. Do not just describe it.**
+
 Deep-dive explanation of how a specific file, feature, or data flow works.
+
+---
 
 ## Input Required
 
@@ -63,3 +76,17 @@ Visual representation of data movement between components.
 **To modify:** [key steps]
 
 **To debug:** [where to look]
+
+---
+
+## Output
+
+Write the explanation to `.agents/research/YYYY-MM-DD-explain-{topic}.md` for future reference.
+
+---
+
+## See Also
+
+- `/implementation-plan` - When you understand the code and want to plan changes
+- `/debug` - When explanation reveals a potential bug
+- `/safe-refactor` - When explanation shows refactoring opportunities

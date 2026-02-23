@@ -1,9 +1,18 @@
 ---
 name: safe-refactor
 description: Plan refactoring with blast radius analysis, dependency mapping, and rollback strategy
+version: 1.0.0
+author: Terry Nyberg
+license: MIT
+allowed-tools: [Glob, Grep, Read, AskUserQuestion]
+metadata:
+  tier: analysis
+  category: refactoring
 ---
 
 # Safe Refactor
+
+**YOU MUST EXECUTE THIS WORKFLOW. Do not just describe it.**
 
 Plan refactoring with blast radius analysis, dependency mapping, and rollback strategy.
 
@@ -90,3 +99,11 @@ After each step:
 3. **Rename before restructure** — rename/move first, then modify
 4. **Add tests before refactoring** — if coverage is low, add tests first
 5. **Small steps** — many small commits > one big commit
+
+---
+
+## See Also
+
+- `/implementation-plan` - For larger feature work with phased implementation
+- `/review-changes` - Pre-commit review before each refactoring step
+- `/scan-similar-bugs` - Find similar patterns after refactoring one instance
