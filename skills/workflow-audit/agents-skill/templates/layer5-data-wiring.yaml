@@ -1,0 +1,185 @@
+# Layer 5: Data Wiring Audit Template
+# Verify features use real data, not mocks
+
+audit:
+  project: "Your App Name"
+  audit_date: "YYYY-MM-DD"
+
+# Step 1: Model Inventory
+# What data does the app actually track?
+model_inventory:
+  models:
+    - name: "Item"
+      cost_properties:
+        - "priceInCents"
+        - "replacementCostInCents"
+        - "currentMarketPriceInCents"
+        - "warrantyDeductibleInCents"
+      relationships:
+        - name: "rmaRecords"
+          type: "[RMARecord]?"
+          relevant_properties: ["repairCostInCents", "issueDescription", "status"]
+        - name: "maintenanceRecords"
+          type: "[MaintenanceRecord]?"
+          relevant_properties: ["costInCents", "description"]
+      decision_properties:
+        - "userRating"
+        - "wouldBuyAgain"
+        - "condition"
+        - "expectedLifespanYears"
+        - "manufacturer"
+
+  total_trackable_properties: 0  # Count after inventory
+
+# Step 2: Feature Data Consumption
+# For each feature, what data does it actually read?
+feature_audits:
+  - feature: "FeatureName"
+    primary_file: "FeatureView.swift"
+    related_files:
+      - "FeatureViewModel.swift"
+      - "FeatureModels.swift"
+
+    # What model data is relevant to this feature?
+    data_available:
+      - property: "item.rmaRecords.repairCostInCents"
+        relevance: "Compare repair cost to replacement cost"
+      - property: "item.currentMarketPriceInCents"
+        relevance: "Know current replacement price"
+
+    # What does the feature actually use?
+    data_used:
+      - property: "item.assetAge"
+        usage: "Check if nearing end of life"
+      - property: "item.userRating"
+        usage: "Factor into keep/replace decision"
+
+    # Gap: available but not used
+    data_ignored:
+      - property: "item.rmaRecords.repairCostInCents"
+        impact: "Can't show real repair cost history"
+      - property: "item.currentMarketPriceInCents"
+        impact: "Can't compare repair vs replace cost"
+
+    coverage: "33%"  # data_used / data_available
+
+# Step 3: Mock Data Detection
+mock_data_found:
+  - id: "mock-001"
+    type: "asyncAfter_fake_fetch"
+    severity: "critical"
+    file: "FeatureView.swift"
+    line: 312
+    code_snippet: |
+      DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+          self.data = HardcodedData(score: 7, cost: "$85")
+      }
+    real_data_source: "item.averageRepairCostInCents computed from RMA records"
+    fix: "Replace with synchronous computation from model data"
+
+  - id: "mock-002"
+    type: "static_array"
+    severity: "critical"
+    file: "FeatureView.swift"
+    line: 357
+    code_snippet: |
+      let alternatives = [
+          Alternative(name: "Product X", price: "$299")
+      ]
+    real_data_source: "AIProductAssistantView with .currentPrice query"
+    fix: "Cross-link to existing AI backend instead of static data"
+
+  - id: "mock-003"
+    type: "simplified_logic"
+    severity: "high"
+    file: "FeatureView.swift"
+    line: 174
+    code_snippet: |
+      if age > lifespan { return .replace }
+      if rating < 3 { return .replace }
+      return .keep
+    real_data_source: "10+ data points available for weighted scoring"
+    fix: "Implement weighted scoring across all available data"
+
+# Step 4: Integration Gaps
+# Features/services that should talk to each other but don't
+integration_gaps:
+  - id: "gap-001"
+    source_service: "PriceWatchManager"
+    target_feature: "RepairKeepReplace"
+    data_available: "currentMarketPriceInCents"
+    currently_connected: false
+    impact: "Decision engine can't compare repair vs replace cost"
+    fix: "Read item.currentMarketPriceInCents in computePath()"
+
+  - id: "gap-002"
+    source_service: "RMARecords"
+    target_feature: "RepairKeepReplace"
+    data_available: "repairCostInCents, issueDescription"
+    currently_connected: false
+    impact: "Shows generic repair info instead of user's actual history"
+    fix: "Aggregate from item.rmaRecords in fetchRepairInfo()"
+
+# Step 5: Platform Parity
+platform_parity:
+  - id: "plat-001"
+    file: "DashboardView+SheetContent.swift"
+    issue: "Computed property not resolved from extension on macOS"
+    ios_status: "works"
+    macos_status: "build error"
+    root_cause: "Property references @State private var in main file"
+    fix: "Inline filtering logic using allItems instead of wrapper property"
+
+  - id: "plat-002"
+    file: "FeatureSheet.swift"
+    issue: "Dismiss button wrapped in #if os(iOS)"
+    ios_status: "works"
+    macos_status: "user trapped in sheet"
+    fix: "Remove #if os(iOS) wrapper from dismiss button"
+
+# Step 6: Decision Logic Quality
+decision_logic:
+  - feature: "RepairKeepReplace"
+    decision_function: "computePath()"
+    factors_available: 12
+    factors_used: 3
+    quality: "poor"  # poor | fair | good | excellent
+    missing_factors:
+      - "repair cost vs replacement cost"
+      - "warranty coverage"
+      - "maintenance history"
+      - "brand reliability"
+      - "condition rating"
+    recommendation: "Implement weighted scoring using all available factors"
+
+# Summary
+summary:
+  mock_data_issues: 0    # Count of mock-00X entries
+  unwired_data_issues: 0 # Count across all feature_audits.data_ignored
+  integration_gaps: 0    # Count of gap-00X entries
+  platform_issues: 0     # Count of plat-00X entries
+  decision_quality_issues: 0  # Count of decision_logic with quality poor/fair
+
+  total_issues: 0
+  by_severity:
+    critical: 0  # Mock data, placeholder AI
+    high: 0      # Unwired data, platform parity, integration gaps
+    medium: 0    # Simplified logic
+
+# Fix priority queue
+fix_order:
+  - id: "mock-001"
+    reason: "Critical - users see fake data"
+    effort: "medium"
+
+  - id: "mock-002"
+    reason: "Critical - AI feature is placeholder"
+    effort: "low"  # Cross-link to existing backend
+
+  - id: "gap-001"
+    reason: "High - existing data not used"
+    effort: "low"
+
+  - id: "plat-001"
+    reason: "High - macOS build broken"
+    effort: "low"

@@ -1,7 +1,7 @@
 ---
 name: enhanced-commands
 description: Enhanced list of custom Claude commands for iOS and macOS Swift projects with detailed prompts, parameters, and examples.
-version: 1.0.0
+version: 2.0.0
 author: Terry Nyberg
 license: MIT
 allowed-tools: [Read]
@@ -23,17 +23,39 @@ Commands are grouped by category for easier navigation. Each includes:
 
 | Command | Description |
 |---------|-------------|
-| `/tech-talk-reportcard` | Technical codebase analysis with A-F grades (architecture, security, performance, etc.) for developers. |
+| `/tech-talk-reportcard` | Technical codebase analysis with A-F grades (architecture, security, performance, concurrency, accessibility, etc.) for developers. |
 | `/plain-talk-reportcard` | Codebase analysis with A-F grades and plain-language summaries for non-technical stakeholders. |
 | `/scan-similar-bugs` | Find similar bug patterns codebase-wide after a fix. |
 | `/review-changes` | Pre-commit review of staged changes for bugs, style, tests. |
 | `/dead-code-scanner` | Find unused code after refactors or as ongoing hygiene. |
 
-**`/tech-talk-reportcard` Details**
-- Parameters: `[path]` (default: entire repo), `--focus=security`
-- Example: `/tech-talk-reportcard Sources/ --focus=performance`
+**`/tech-talk-reportcard` Details** (v2.0.0)
+- Parameters: `[path]` (default: entire repo)
+- Example: `/tech-talk-reportcard Sources/`
 - Output: `.agents/research/YYYY-MM-DD-tech-reportcard.md`
-- Features: Interactive questions before analysis, table-formatted output, prioritized issues with Urgency/Risk/ROI ratings.
+- Features:
+  - Interactive questions (CLAUDE.md inclusion, mode, timeline, focus)
+  - **Automated grep scans** for architecture, security, performance, concurrency, accessibility, testing, energy
+  - **9 grading categories**: Architecture, Code Quality, Performance, Concurrency, Security, Accessibility, Testing, UI/UX, Data
+  - **Trend comparison** to previous reports (grade changes ↑↓→)
+  - **Deep dive option** - invoke Axiom skills for category-specific analysis
+  - Prioritized issues with Urgency/Risk/ROI/Blast ratings
+  - Follow-up to `/implementation-plan`
+
+**`/plain-talk-reportcard` Details** (v2.0.0)
+- Parameters: `[path]` (default: entire repo)
+- Example: `/plain-talk-reportcard`
+- Output: `.agents/research/YYYY-MM-DD-plain-reportcard.md`
+- Features:
+  - Interactive questions (CLAUDE.md, mode, backend, timeline, focus)
+  - **7 grading categories** in plain language: User Experience, Reliability, Accessibility, Security, Performance, Code Health, Testing
+  - **Trend comparison** to previous reports
+  - **Plain language glossary** translates technical terms
+  - Effort estimates for each issue (e.g., "~2 days")
+  - Risk explanations (e.g., "Risk if ignored: Bad reviews")
+  - Recommended action timeline (Week 1, Week 2-3, Month 2)
+  - Deep dive option for accessibility, UX, security
+  - Follow-up to `/implementation-plan`
 
 **`/security-audit` Details**
 - Parameters: `--quick` (surface only), `--focus=secrets|storage|network|privacy`
@@ -123,8 +145,10 @@ For iOS-specific deep dives, commands invoke Axiom skills:
 
 | Command | Axiom Skills Invoked |
 |---------|---------------------|
-| `/security-audit` | `axiom-security-privacy-scanner`, `axiom-storage`, `axiom-networking` |
-| `/performance-check` | `axiom-swift-performance`, `axiom-swiftui-performance`, `axiom-memory-debugging`, `axiom-energy` |
+| `/tech-talk-reportcard` | `axiom-swiftui-architecture`, `axiom-ios-performance`, `axiom-ios-concurrency`, `axiom-ios-accessibility`, `axiom-ios-testing`, `axiom-memory-debugging` |
+| `/plain-talk-reportcard` | `axiom-ios-accessibility`, `axiom-ios-ui`, `axiom-hig` |
+| `/security-audit` | `axiom-storage-diag`, `axiom-file-protection-ref` |
+| `/performance-check` | `axiom-swift-performance`, `axiom-swiftui-performance`, `axiom-ios-performance`, `axiom-memory-debugging`, `axiom-energy` |
 | `/debug` | `axiom-memory-debugging`, `axiom-hang-diagnostics`, `axiom-swiftui-debugging` |
 | `/generate-tests` | `axiom-swift-testing`, `axiom-testing-async`, `axiom-xctest-automation` |
 

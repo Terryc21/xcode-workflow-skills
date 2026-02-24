@@ -1,0 +1,101 @@
+# Layer 2: Flow Trace Template
+# Create one file per critical flow being traced
+
+flow_trace:
+  id: "flow-001"
+  name: "Feature Name from Entry Point"
+  entry_point_id: "promo-001"  # Reference to Layer 1 inventory
+  trace_date: "YYYY-MM-DD"
+
+  # Initial assessment
+  severity: "unknown"  # critical | high | medium | low | ok
+  issue_type: "none"   # dead_end | wrong_destination | incomplete_navigation | missing_auto_activation | two_step_flow | missing_feedback | none
+
+# Step-by-step trace
+steps:
+  - step: 1
+    actor: "User"  # User | System
+    action: "Sees Feature Card on Dashboard"
+    file: "DashboardView.swift"
+    line: 100
+    ui_element: "PromotionCard with blue icon"
+    label: "Try Feature X"
+    condition: "Feature card visible when: condition here"
+
+  - step: 2
+    actor: "User"
+    action: "Taps Feature Card"
+    file: "DashboardView.swift"
+    line: 105
+    code: "activeSheet = .featureX"
+
+  - step: 3
+    actor: "System"
+    action: "Presents FeatureXView as sheet"
+    file: "SheetContent.swift"
+    line: 50
+    result: "FeatureXView displayed"
+    # Or if issue found:
+    # issue: "Sheet handler missing - case not implemented"
+    # severity: "critical"
+
+  - step: 4
+    actor: "User"
+    action: "Completes task in FeatureX"
+    result: "Task completed successfully"
+    feedback: "Success toast shown"
+
+# Journey comparison
+expected_journey:
+  steps: 3
+  flow:
+    - "See card"
+    - "Tap card"
+    - "Use feature"
+
+actual_journey:
+  steps: 3  # Or more if there are issues
+  flow:
+    - "See card"
+    - "Tap card"
+    - "Use feature"
+
+# Gap analysis (fill in if issues found)
+gap_analysis:
+  type: "none"  # incomplete_navigation | missing_auto_activation | dead_end | etc
+  extra_steps: 0
+  user_confusion_risk: "none"  # none | low | medium | high | very_high
+  completion_possible: true
+  issue_summary: |
+    Describe any issues found during trace.
+    Leave empty if flow works correctly.
+
+# Recommendations (if issues found)
+recommendations:
+  option_a:
+    approach: "Describe fix option A"
+    changes:
+      - "File 1: Change X to Y"
+      - "File 2: Add handler for case"
+    effort: "low"  # low | medium | high
+    pros: "Why this option is good"
+    cons: "Drawbacks"
+
+  option_b:
+    approach: "Describe fix option B"
+    changes:
+      - "Different approach"
+    effort: "medium"
+    pros: "Why this option is good"
+    cons: "Drawbacks"
+
+  preferred: "option_a"
+  rationale: |
+    Why the preferred option is recommended.
+
+# Verification steps after fix
+verification:
+  - "Tap card from dashboard"
+  - "Verify feature opens immediately"
+  - "Complete a task in the feature"
+  - "Verify success feedback shown"

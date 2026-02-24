@@ -1,0 +1,150 @@
+# Flow Trace: Bulk Actions Promotion Card
+# ID: flow-003
+# Severity: 🟠 HIGH
+# Issue: Missing auto-activation - user must manually enter Select mode
+
+flow_trace:
+  id: "flow-003"
+  name: "Bulk Actions from Dashboard Promotion Card"
+  entry_point: "promo-bulkOperations"
+  severity: "high"
+  issue_type: "missing_auto_activation"
+
+steps:
+  - step: 1
+    actor: "User"
+    action: "Sees Bulk Actions promotion card on Dashboard"
+    file: "DashboardView+PromotionCards.swift"
+    line: 119
+    condition: "!hasUsedSelectMode && allItems.count >= 5"
+    ui_element: "CompactPromotionCard with blue checkmark icon"
+    card_title: "Bulk Actions"
+
+  - step: 2
+    actor: "User"
+    action: "Taps Bulk Actions card"
+    file: "DashboardView+PromotionCards.swift"
+    line: 126
+    code: "action: { selectedSection = .myProducts }"
+
+  - step: 3
+    actor: "System"
+    action: "Navigates to My Products section"
+    file: "MyProductsView.swift"
+    result: "Product list displayed in normal mode"
+
+  - step: 4
+    actor: "User"
+    action: "Lands on My Products list"
+    file: "MyProductsView.swift"
+    line: 97
+    observation: "isSelectMode = false (default state)"
+    issue: "Select mode not activated"
+
+  - step: 5
+    actor: "User"
+    action: "Must find and tap Select button"
+    file: "MyProductsToolbar.swift"
+    observation: |
+      Select button location varies by platform:
+      - iOS: In toolbar, may require scrolling header
+      - macOS: In toolbar row
+
+      User doesn't know to look for "Select" button
+      Card promised "Bulk Actions" but shows normal list
+
+  - step: 6
+    actor: "User"
+    action: "Taps Select button in toolbar"
+    result: "isSelectMode = true"
+
+  - step: 7
+    actor: "System"
+    action: "Shows bulk actions toolbar"
+    file: "MyProductsView.swift"
+    line: 600
+    result: "User can now select items and perform bulk actions"
+
+expected_journey:
+  steps: 3
+  flow:
+    - "Tap Bulk Actions card"
+    - "See Select mode with checkboxes"
+    - "Start selecting items"
+
+actual_journey:
+  steps: 5
+  flow:
+    - "Tap Bulk Actions card"
+    - "Land on normal product list"
+    - "Wonder where bulk actions are"
+    - "Find and tap Select button"
+    - "See Select mode with checkboxes"
+    - "Start selecting items"
+
+gap_analysis:
+  extra_steps: 2
+  user_confusion_risk: "high"
+  completion_rate_impact: "Many users may not discover Select button"
+  issue_summary: |
+    The promotion card says "Bulk Actions" but doesn't activate
+    the feature. Users expecting to immediately see checkboxes
+    and bulk operation buttons are instead shown a normal list.
+
+    The Select button exists but is not obvious - users who
+    haven't used it before won't know to look for it.
+
+technical_analysis:
+  current_state:
+    - "selectedSection = .myProducts just navigates to view"
+    - "isSelectMode is @State in MyProductsView, not bindable from outside"
+    - "No mechanism to pass start in select mode flag"
+
+  required_changes:
+    - "Add parameter to MyProductsView for initial select mode"
+    - "Or use environment/notification to trigger select mode"
+
+recommendations:
+  option_a:
+    approach: "Add initialSelectMode parameter"
+    changes:
+      - file: "MyProductsView.swift"
+        change: "Add init parameter: initialSelectMode: Bool = false"
+      - file: "AppNavigationView.swift"
+        change: "Pass flag when navigating from promotion card"
+      - file: "DashboardView+PromotionCards.swift"
+        change: "Set flag when bulk actions card tapped"
+    effort: "Medium"
+    pros: "Clean, explicit, follows SwiftUI patterns"
+    cons: "Requires coordination across multiple files"
+
+  option_b:
+    approach: "Use notification to trigger Select mode"
+    changes:
+      - file: "MyProductsView.swift"
+        change: "Listen for .shouldEnterSelectMode notification"
+      - file: "DashboardView+PromotionCards.swift"
+        change: "Post notification after navigation"
+    effort: "Low"
+    pros: "Decoupled, easy to implement"
+    cons: "Notification timing may be tricky"
+
+  option_c:
+    approach: "Show BulkEditSelectionView as sheet instead"
+    change: "action: { activeSheet = .bulkEdit }"
+    file: "DashboardView+PromotionCards.swift:126"
+    effort: "Low (1 line)"
+    pros: "Immediate access, already exists as sheet"
+    cons: "Different UX - sheet vs integrated list"
+
+  preferred: "option_c"
+  rationale: |
+    DashboardSheetType already has .bulkEdit case that shows
+    BulkEditSelectionView. This provides immediate access to
+    bulk operations without navigating away from Dashboard.
+
+    Most other promotion cards use sheet pattern already.
+    This maintains consistency and provides instant gratification.
+
+    If users want the full My Products + Select mode experience,
+    they can navigate there manually.

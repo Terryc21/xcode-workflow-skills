@@ -1,0 +1,235 @@
+# Layer 3: Issue Detection Results
+# Generated: 2026-02-23
+# Project: Stuffolio v1.0
+
+metadata:
+  scan_date: "2026-02-23"
+  entry_points_checked: 200+
+  sheet_types_defined: 29
+  sheet_handlers_implemented: 29
+  issues_found: 8
+
+# =============================================================================
+# ISSUE SUMMARY
+# =============================================================================
+
+summary:
+  critical: 1
+  high: 3
+  medium: 2
+  low: 2
+  total: 8
+
+# =============================================================================
+# CRITICAL ISSUES
+# =============================================================================
+
+critical_issues:
+  - id: "issue-001"
+    category: "dead_end"
+    severity: "critical"
+    title: "Repair Advisor promotion card links to wrong destination"
+    entry_point: "promo-repairAdvisor"
+    file: "DashboardView+PromotionCards.swift"
+    lines: [110, 275]
+    expected: "RepairKeepReplaceView (Repair, Keep, or Replace?)"
+    actual: "Tools section (feature not accessible from there)"
+    impact: "Users with damaged items cannot find the feature they need"
+    fix: "Create DamagedItemsPickerSheet following AppleCare pattern"
+    effort: "2-3 hours"
+    trace: "layer2-traces/flow-002-repairadvisor.yaml"
+
+# =============================================================================
+# HIGH ISSUES
+# =============================================================================
+
+high_issues:
+  - id: "issue-002"
+    category: "incomplete_navigation"
+    severity: "high"
+    title: "Price Watch card lands at top of Tools, not at feature"
+    entry_point: "promo-priceWatch"
+    file: "DashboardView+PromotionCards.swift"
+    lines: [78, 225]
+    expected: "Price Watch visible/focused"
+    actual: "Tools section top (must scroll to 3rd category)"
+    impact: "User confusion, may not find feature"
+    fix: "Add .priceWatch to DashboardSheetType, use activeSheet"
+    effort: "15-20 minutes"
+    trace: "layer2-traces/flow-001-pricewatch.yaml"
+
+  - id: "issue-003"
+    category: "missing_auto_activation"
+    severity: "high"
+    title: "Bulk Actions card doesn't activate Select mode"
+    entry_point: "promo-bulkOperations"
+    file: "DashboardView+PromotionCards.swift"
+    lines: [126, 299]
+    expected: "My Products in Select mode with checkboxes"
+    actual: "My Products in normal mode"
+    impact: "User must find and tap Select button manually"
+    fix: "Use activeSheet = .bulkEdit (already exists)"
+    effort: "5 minutes"
+    trace: "layer2-traces/flow-003-bulkactions.yaml"
+
+  - id: "issue-004"
+    category: "duplicate_code"
+    severity: "high"
+    title: "Promotion cards have duplicate compact + full versions"
+    file: "DashboardView+PromotionCards.swift"
+    observation: |
+      Each promotion card has TWO implementations:
+      1. PromotionCardData in activePromotionCards (lines 36-136)
+      2. @ViewBuilder var xxxPromotionCard (lines 163-307)
+
+      Both have the SAME bug for Price Watch, Repair Advisor, Bulk Actions.
+      Fixing one doesn't fix the other.
+    impact: "Maintenance burden, bug duplication"
+    fix: "Remove redundant @ViewBuilder implementations, use only data model"
+    effort: "30 minutes"
+
+# =============================================================================
+# MEDIUM ISSUES
+# =============================================================================
+
+medium_issues:
+  - id: "issue-005"
+    category: "two_step_flow"
+    severity: "medium"
+    title: "AI Assistant requires item picker before showing feature"
+    entry_point: "aiAssistant"
+    file: "DashboardView+SheetContent.swift"
+    line: 62
+    observation: |
+      Flow: Tap AI Assistant → AIProductPickerSheet → Select item → AIProductAssistantView
+      This is intentional (AI needs item context) but adds friction.
+    assessment: "Acceptable - feature requires item context"
+    optimization: "Consider: skip picker if only 1 item exists"
+    effort: "Low priority"
+
+  - id: "issue-006"
+    category: "inconsistent_pattern"
+    severity: "medium"
+    title: "Same features accessible via both navigation and sheets"
+    observation: |
+      Some features can be accessed two different ways:
+
+      Example: Tools section
+      - Via tab: selectedSection = .tools → ToolsView
+      - Via promotion cards: selectedSection = .tools → ToolsView (with issues)
+      - Via dashboard shortcut: Could use activeSheet
+
+      This creates inconsistent user experiences depending on entry point.
+    impact: "Confusing UX, maintenance burden"
+    recommendation: "Standardize on sheet pattern for feature discovery cards"
+
+# =============================================================================
+# LOW ISSUES
+# =============================================================================
+
+low_issues:
+  - id: "issue-007"
+    category: "missing_feedback"
+    severity: "low"
+    title: "Not all actions have toast confirmations"
+    observation: |
+      ToastManager.shared.success/error found in 26 files.
+      Core actions (add, edit, delete, archive) have toasts.
+      Some secondary actions may be missing feedback.
+    files_with_toasts: 26
+    assessment: "Core flows covered, edge cases may need review"
+    effort: "Audit during testing"
+
+  - id: "issue-008"
+    category: "orphaned_code"
+    severity: "low"
+    title: "Duplicate @ViewBuilder promotion cards may be unused"
+    file: "DashboardView+PromotionCards.swift"
+    lines: "163-307"
+    observation: |
+      The @ViewBuilder var xxxPromotionCard implementations appear
+      to be legacy code from before the grid refactor (Phase 4.0).
+
+      Current usage is via promotionCardsGrid which uses
+      activePromotionCards data model + CompactPromotionCard.
+
+      The full-size PromotionCard variants may be dead code.
+    action: "Verify with grep, remove if unused"
+    effort: "15 minutes"
+
+# =============================================================================
+# CHECKS PASSED
+# =============================================================================
+
+checks_passed:
+  - check: "Sheet case coverage"
+    result: "PASS"
+    details: "All 29 DashboardSheetType cases have handlers in sheetContent(for:)"
+
+  - check: "Core feature accessibility"
+    result: "PASS"
+    details: "All major features have at least one entry point"
+
+  - check: "Core action feedback"
+    result: "PASS"
+    details: "Add/Edit/Delete/Archive actions have toast confirmations"
+
+  - check: "Navigation enum completeness"
+    result: "PASS"
+    details: "AppSection enum covers all sidebar sections"
+
+# =============================================================================
+# PATTERNS IDENTIFIED
+# =============================================================================
+
+patterns:
+  good_patterns:
+    - pattern: "Sheet-based feature access"
+      example: "activeSheet = .stuffScout"
+      benefit: "Immediate access, clear focus"
+
+    - pattern: "Centralized sheet enum"
+      example: "DashboardSheetType"
+      benefit: "Easy to audit completeness"
+
+    - pattern: "Item picker for context-dependent features"
+      example: "AppleCareTrackingSheet"
+      benefit: "Provides necessary context"
+
+  problematic_patterns:
+    - pattern: "Section navigation for feature discovery"
+      example: "selectedSection = .tools"
+      problem: "User lands at section top, not feature"
+      fix: "Use sheet pattern instead"
+
+    - pattern: "Duplicate implementations"
+      example: "PromotionCardData + @ViewBuilder var"
+      problem: "Bugs must be fixed in two places"
+      fix: "Remove redundant code"
+
+# =============================================================================
+# RECOMMENDED FIX ORDER
+# =============================================================================
+
+fix_order:
+  immediate:
+    - issue: "issue-003"
+      reason: "5-minute fix, high impact"
+      change: "Bulk Actions: activeSheet = .bulkEdit"
+
+    - issue: "issue-002"
+      reason: "15-minute fix, high impact"
+      change: "Price Watch: add sheet type, use activeSheet"
+
+  short_term:
+    - issue: "issue-001"
+      reason: "Critical bug, 2-3 hours"
+      change: "Repair Advisor: create DamagedItemsPickerSheet"
+
+    - issue: "issue-004"
+      reason: "Reduces future bugs"
+      change: "Remove duplicate @ViewBuilder promotion cards"
+
+  low_priority:
+    - issue: "issue-005, issue-006, issue-007, issue-008"
+      reason: "Polish items, not blocking release"
