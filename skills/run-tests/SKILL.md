@@ -12,6 +12,10 @@ metadata:
 
 # Run Tests
 
+> **Quick Ref:** Smart test execution with split strategies (UI sequential + unit parallel). Supports `--unattended` for hands-off runs.
+
+**YOU MUST EXECUTE THIS WORKFLOW. Do not just describe it.**
+
 Execute tests with configurable parallelization strategy.
 
 ## Execution Strategies

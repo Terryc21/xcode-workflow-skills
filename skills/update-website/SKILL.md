@@ -1,9 +1,13 @@
 ---
 name: update-website
-description: Sync website content with app codebase - features, changelog, screenshots, docs
-version: 2.0.0
+description: 'Sync website content with app codebase - features, changelog, screenshots, docs. Triggers: "update website", "sync website", "website sync".'
+version: 2.0.1
 author: Terry Nyberg
 license: MIT
+allowed-tools: [Read, Write, Edit, Grep, Glob, Bash, AskUserQuestion]
+metadata:
+  tier: execution
+  category: release
 ---
 
 # Website Sync Skill

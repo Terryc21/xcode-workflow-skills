@@ -1,7 +1,7 @@
 # Claude Code Custom Commands Reference
 
-Generated: 2026-02-23
-Plugin Version: 2.0.0
+Generated: 2026-02-24
+Plugin Version: 2.1.0
 
 This document contains the full prompts for all custom commands in the xcode-workflow-skills plugin.
 
@@ -16,20 +16,21 @@ This document contains the full prompts for all custom commands in the xcode-wor
 | [/tech-talk-reportcard](#tech-talk-reportcard) | 2.0.0 | Technical codebase analysis with A-F grades |
 | [/plain-talk-reportcard](#plain-talk-reportcard) | 2.0.0 | Plain-language analysis for stakeholders |
 | [/scan-similar-bugs](#scan-similar-bugs) | 1.0.0 | Find other occurrences of a bug pattern |
-| [/review-changes](#review-changes) | 1.0.0 | Pre-commit review of staged changes |
+| [/review-changes](#review-changes) | 1.1.0 | Pre-commit review of staged changes |
 | [/dead-code-scanner](#dead-code-scanner) | 1.0.0 | Find unused code in the codebase |
+| [/workflow-audit](#workflow-audit) | 2.1.1 | Systematic UI workflow auditing |
 | [/implementation-plan](#implementation-plan) | 1.0.0 | Structured feature planning |
-| [/safe-refactor](#safe-refactor) | 1.0.0 | Plan refactoring with blast radius analysis |
-| [/debug](#debug) | 1.0.0 | Systematic debugging workflow |
-| [/explain](#explain) | 1.0.0 | Deep-dive explanation of code or features |
+| [/safe-refactor](#safe-refactor) | 1.1.0 | Plan refactoring with blast radius analysis |
+| [/debug](#debug) | 1.1.0 | Systematic debugging workflow |
+| [/explain](#explain) | 1.1.0 | Deep-dive explanation of code or features |
 | [/generate-tests](#generate-tests) | 1.0.0 | Generate unit and UI tests |
 | [/run-tests](#run-tests) | 1.0.0 | Run tests with smart execution strategies |
 | [/ui-scan](#ui-scan) | 1.0.0 | UI test environment setup and accessibility scan |
 | [/security-audit](#security-audit) | 1.0.0 | Security scan for API keys, storage, network |
 | [/performance-check](#performance-check) | 1.0.0 | Performance analysis for memory, CPU, energy |
-| [/release-prep](#release-prep) | 1.0.0 | Pre-release checklist |
+| [/release-prep](#release-prep) | 1.1.0 | Pre-release checklist with automated version bumps |
 | [/release-screenshots](#release-screenshots) | 1.0.0 | Capture App Store screenshots |
-| [/update-website](#update-website) | 2.0.0 | Sync website content with app codebase |
+| [/update-website](#update-website) | 2.0.1 | Sync website content with app codebase |
 
 ---
 

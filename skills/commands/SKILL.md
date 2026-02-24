@@ -18,8 +18,9 @@ metadata:
 |---------|---------|-------------|
 | `/tech-talk-reportcard` | 2.0.0 | Technical codebase analysis with A-F grades for developers (architecture, security, performance, concurrency, accessibility, testing). |
 | `/plain-talk-reportcard` | 2.0.0 | Codebase analysis with A-F grades and plain-language summaries for non-technical stakeholders. |
-| `/review-changes` | 1.0.0 | Pre-commit review of staged changes for bugs, style issues, and missing tests. |
+| `/review-changes` | 1.1.0 | Pre-commit review of staged changes for bugs, style issues, and missing tests. |
 | `/dead-code-scanner` | 1.0.0 | Find unused code after refactors or as ongoing hygiene. |
+| `/workflow-audit` | 2.1.1 | Systematic UI workflow auditing — entry points, flow tracing, dead ends, data wiring. |
 
 ## Testing & Debugging
 
@@ -28,7 +29,7 @@ metadata:
 | `/run-tests` | 1.0.0 | Run tests with smart strategies. Supports `--unattended` for hands-off execution. |
 | `/generate-tests` | 1.0.0 | Generate unit and UI tests for specified code with edge cases and mocks. |
 | `/ui-scan` | 1.0.0 | UI test environment setup with splash/onboarding bypass and accessibility identifier scan. |
-| `/debug` | 1.0.0 | Systematic debugging workflow: reproduce, isolate, hypothesize, verify, and fix. |
+| `/debug` | 1.1.0 | Systematic debugging workflow: reproduce, isolate, hypothesize, verify, and fix. |
 | `/scan-similar-bugs` | 1.0.0 | After fixing a bug, systematically find other occurrences of the same pattern across the codebase. |
 
 ## Planning & Refactoring
@@ -43,9 +44,9 @@ metadata:
 
 | Command | Version | Description |
 |---------|---------|-------------|
-| `/release-prep` | 1.0.0 | Pre-release checklist including version bump, changelog, known issues, and store metadata. |
+| `/release-prep` | 1.1.0 | Pre-release checklist with automated version bumps, changelog generation, and privacy manifest validation. |
 | `/release-screenshots` | 1.0.0 | Capture App Store screenshots across all required device sizes using XcodeBuildMCP. |
-| `/update-website` | 2.0.0 | Sync website content with app codebase - features, changelog, screenshots, docs. |
+| `/update-website` | 2.0.1 | Sync website content with app codebase - features, changelog, screenshots, docs. |
 
 ## Security & Performance
 

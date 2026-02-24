@@ -28,6 +28,7 @@ Commands are grouped by category for easier navigation. Each includes:
 | `/scan-similar-bugs` | Find similar bug patterns codebase-wide after a fix. |
 | `/review-changes` | Pre-commit review of staged changes for bugs, style, tests. |
 | `/dead-code-scanner` | Find unused code after refactors or as ongoing hygiene. |
+| `/workflow-audit` | Systematic UI workflow auditing — entry points, flow tracing, dead ends, data wiring. |
 
 **`/tech-talk-reportcard` Details** (v2.0.0)
 - Parameters: `[path]` (default: entire repo)
@@ -75,6 +76,12 @@ Commands are grouped by category for easier navigation. Each includes:
 - Output: `.agents/research/YYYY-MM-DD-dead-code-*.md`
 - Features: Build + test verification before removal, allowlist support, false positive tracking.
 
+**`/workflow-audit` Details** (v2.1.1)
+- Parameters: `layer1|layer2|layer3|layer4|layer5`, `fix`, `status`
+- Example: `/workflow-audit`, `/workflow-audit layer1`, `/workflow-audit fix`
+- Output: `.workflow-audit/` directory in project root
+- Features: 5-layer analysis (discovery → trace → issues → evaluation → data wiring), issue categories with severity, design principle validation.
+
 ## Planning & Refactoring
 
 | Command | Description |
@@ -96,10 +103,11 @@ Commands are grouped by category for easier navigation. Each includes:
 | `/run-tests` | Smart test runs, supports `--unattended`. |
 | `/ui-scan` | UI setup with onboarding bypass, accessibility scan. |
 
-**`/debug` Details**
-- Parameters: `issue-description`, `[file]`
-- Example: `/debug "Crash on login" AuthView.swift`
-- Features: Hypothesis table, root cause analysis, similar bug scan integration.
+**`/debug` Details** (v1.1.0)
+- Parameters: `issue-description`, `--recent`, `--crash`
+- Example: `/debug "Crash on login"`, `/debug --recent`
+- Output: `.agents/research/YYYY-MM-DD-debug-*.md`
+- Features: Concrete evidence-gathering (git log, grep patterns), common iOS bug pattern checklist, hypothesis table, root cause report, similar bug scan integration.
 
 **`/generate-tests` Details**
 - Parameters: `TypeName` or `path/to/File.swift`, `--ui` for UI tests
@@ -120,10 +128,11 @@ Commands are grouped by category for easier navigation. Each includes:
 | `/update-website` | Sync website content with app codebase. |
 | `/explain` | Deep-dive on file/feature/data flow. |
 
-**`/release-prep` Details**
-- Parameters: `--bump=major|minor|patch`
-- Example: `/release-prep --bump=minor`
-- Features: Version bump, changelog generation, App Store metadata checklist.
+**`/release-prep` Details** (v1.1.0)
+- Parameters: `version`, `--patch`, `--minor`, `--changelog-only`
+- Example: `/release-prep 2.1.0`, `/release-prep --patch`
+- Output: `.agents/research/YYYY-MM-DD-release-prep-vX.Y.Z.md`
+- Features: Automated version bump (find and edit pbxproj), changelog generation from git history, privacy manifest validation, code readiness checks (debug code, TODOs, warnings), archive readiness.
 
 **`/release-screenshots` Details**
 - Parameters: (interactive)
