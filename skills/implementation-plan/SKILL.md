@@ -12,9 +12,23 @@ metadata:
 
 # Implementation Plan Generator
 
+> **Quick Ref:** Interactive planning: gather requirements → analyze codebase → phased task list with risk/ROI ratings → test plan → rollback strategy.
+
+**YOU MUST EXECUTE THIS WORKFLOW. Do not just describe it.**
+
 **Required output:** Every task/issue MUST include Urgency, Risk, ROI, and Blast Radius ratings. Do not omit these ratings.
 
 Create detailed implementation plans with impact analysis, phased tasks, and risk assessment.
+
+## Quick Commands
+
+| Command | Description |
+|---------|-------------|
+| `/implementation-plan` | Interactive — prompts for work type, risk, timeline |
+| `/implementation-plan add search feature` | Direct — starts with feature description |
+| `/implementation-plan --phase=1` | Show only Phase A tasks |
+
+---
 
 ## Step 1: Interactive Input
 
@@ -91,7 +105,24 @@ After gathering input, produce:
 
 ## Step 3: Codebase Analysis
 
-Scan the codebase and produce:
+Scan the codebase using these tools:
+
+```
+# Find files related to the feature area
+Glob pattern="**/*FeatureName*.swift"
+Grep pattern="FeatureKeyword" glob="*.swift" output_mode="files_with_matches"
+
+# Find existing patterns to follow
+Grep pattern="class.*ViewModel|struct.*View.*body" glob="*.swift" output_mode="files_with_matches"
+
+# Find dependencies that will be affected
+Grep pattern="import.*ModuleName|ModuleName\\." glob="*.swift" output_mode="files_with_matches"
+
+# Find test files for affected areas
+Glob pattern="Tests/**/*FeatureName*Tests.swift"
+```
+
+Produce:
 
 ### Related Code Table
 
@@ -222,3 +253,42 @@ AskUserQuestion with questions:
   }
 ]
 ```
+
+---
+
+## Worked Example (Abbreviated)
+
+```
+User: "Add a search feature to the items list"
+
+Step 1: Work type = New feature, Risk = Balanced, Timeline = Normal
+
+Step 2: Feature Summary
+  What: Add search bar to filter items by title, category, and notes
+  Why: Users with many items can't find things quickly
+  Scope: Search UI + filter logic. NOT: full-text search, search history
+
+Step 3: Codebase Analysis
+  Related: ItemListView.swift, ItemListViewModel.swift, Item.swift
+  Patterns: Other views use @State for search text + computed filtered arrays
+  Dependencies: SwiftData (Item model), existing filter system
+
+Step 4: Impact — 3 files (Low risk)
+
+Step 5: Implementation Plan
+  Phase A: Add searchText @State + .searchable modifier to ItemListView
+  Phase B: Add filter logic to ItemListViewModel
+  Phase C: Add unit tests for filter logic
+
+Step 6: Risk — Low (additive change, no existing code modified)
+
+Step 7: Test Plan — Unit tests for filter matching, empty query, case sensitivity
+```
+
+---
+
+## See Also
+
+- `/safe-refactor` — When the plan involves restructuring existing code
+- `/review-changes` — Review each phase before committing
+- `/generate-tests` — Generate tests for new functionality

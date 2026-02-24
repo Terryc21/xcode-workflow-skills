@@ -1,14 +1,35 @@
 ---
 name: workflow-audit
-description: Systematic UI workflow auditing for SwiftUI applications. Discovers entry points, traces user flows, detects dead ends and broken promises, audits data wiring, evaluates from user perspective.
-version: 2.1.0
+description: 'Systematic UI workflow auditing for SwiftUI applications. Discovers entry points, traces user flows, detects dead ends and broken promises, audits data wiring, evaluates from user perspective. Triggers: "workflow audit", "audit flows", "find dead ends", "check navigation".'
+version: 2.1.1
+author: Terry Nyberg
+license: MIT
+allowed-tools: [Read, Grep, Glob, Bash, Edit, Write, AskUserQuestion]
+metadata:
+  tier: execution
+  category: analysis
 ---
 
 # Workflow Audit Skill
 
+> **Quick Ref:** 5-layer UI workflow audit: discover entry points → trace flows → detect issues → evaluate UX → verify data wiring. Output: `.workflow-audit/` in project root.
+
 <workflow-audit>
 
 You are performing a systematic workflow audit on this SwiftUI application.
+
+## Quick Commands
+
+| Command | Description |
+|---------|-------------|
+| `/workflow-audit` | Full 5-layer audit |
+| `/workflow-audit layer1` | Discovery only — find all entry points |
+| `/workflow-audit layer2` | Trace — trace critical paths |
+| `/workflow-audit layer3` | Issues — detect problems across codebase |
+| `/workflow-audit layer4` | Evaluate — assess user impact |
+| `/workflow-audit layer5` | Data wiring — verify real data usage |
+| `/workflow-audit fix` | Generate fixes for found issues |
+| `/workflow-audit status` | Show audit progress and remaining issues |
 
 ## Overview
 

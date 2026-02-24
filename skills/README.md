@@ -1,6 +1,6 @@
 # Xcode Workflow Skills
 
-Claude Code plugin providing 16 workflow skills for iOS/macOS development.
+Claude Code plugin providing 20 workflow skills for iOS/macOS development.
 
 ## Installation
 
@@ -23,8 +23,9 @@ claude plugin install Terryc21/xcode-workflow-skills
 | `/tech-talk-reportcard` | 2.0.0 | Technical codebase analysis with A-F grades (architecture, security, performance, concurrency, accessibility) |
 | `/plain-talk-reportcard` | 2.0.0 | Plain-language analysis for stakeholders with effort estimates |
 | `/scan-similar-bugs` | 1.0.0 | Find similar bug patterns after fixing one |
-| `/review-changes` | 1.0.0 | Pre-commit code review |
+| `/review-changes` | 1.1.0 | Pre-commit code review |
 | `/dead-code-scanner` | 1.0.0 | Find unused code |
+| `/workflow-audit` | 2.1.1 | Systematic UI workflow auditing |
 
 ### Testing & Debugging
 | Command | Version | Description |
@@ -32,21 +33,21 @@ claude plugin install Terryc21/xcode-workflow-skills
 | `/run-tests` | 1.0.0 | Smart test execution strategies |
 | `/generate-tests` | 1.0.0 | Generate unit and UI tests |
 | `/ui-scan` | 1.0.0 | UI test setup and accessibility scan |
-| `/debug` | 1.0.0 | Systematic debugging workflow |
+| `/debug` | 1.1.0 | Systematic debugging workflow |
 
 ### Planning & Refactoring
 | Command | Version | Description |
 |---------|---------|-------------|
 | `/implementation-plan` | 1.0.0 | Phased implementation planning |
-| `/safe-refactor` | 1.0.0 | Refactoring with blast radius analysis |
-| `/explain` | 1.0.0 | Deep-dive code explanation |
+| `/safe-refactor` | 1.1.0 | Refactoring with blast radius analysis |
+| `/explain` | 1.1.0 | Deep-dive code explanation |
 
 ### Release & Deployment
 | Command | Version | Description |
 |---------|---------|-------------|
-| `/release-prep` | 1.0.0 | Pre-release checklist |
+| `/release-prep` | 1.1.0 | Pre-release checklist with automated version bumps |
 | `/release-screenshots` | 1.0.0 | App Store screenshot capture |
-| `/update-website` | 2.0.0 | Sync website with app changes |
+| `/update-website` | 2.0.1 | Sync website with app changes |
 
 ### Security & Performance
 | Command | Version | Description |
@@ -107,7 +108,7 @@ For schema migrations, use Axiom directly: `/axiom:axiom-swiftdata-migration`
 
 ## Version
 
-2.0.0
+2.1.0
 
 ## License
 

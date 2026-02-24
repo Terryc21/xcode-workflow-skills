@@ -12,6 +12,10 @@ metadata:
 
 # Release Screenshots
 
+> **Quick Ref:** Automate App Store screenshots across all required device sizes (6.9", 6.5", 5.5") using XcodeBuildMCP.
+
+**YOU MUST EXECUTE THIS WORKFLOW. Do not just describe it.**
+
 Automate capturing App Store screenshots across all required device sizes.
 
 ## When to Use This Skill

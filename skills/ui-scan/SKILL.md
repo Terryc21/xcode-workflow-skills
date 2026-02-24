@@ -12,6 +12,10 @@ metadata:
 
 # UI Scan
 
+> **Quick Ref:** UI test environment setup: splash/onboarding bypass, accessibility identifier scan, element finding strategies, parallel vs sequential execution.
+
+**YOU MUST EXECUTE THIS WORKFLOW. Do not just describe it.**
+
 Set up UI test environment and scan for accessibility/testability issues.
 
 ## Test Execution Mode
