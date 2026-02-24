@@ -16,8 +16,8 @@ metadata:
 
 | Command | Version | Description |
 |---------|---------|-------------|
-| `/tech-talk-reportcard` | 1.0.0 | Technical codebase analysis with A-F grades for developers (architecture, security, performance, testing). |
-| `/plain-talk-reportcard` | 1.0.0 | Codebase analysis with A-F grades and plain-language summaries for non-technical stakeholders. |
+| `/tech-talk-reportcard` | 2.0.0 | Technical codebase analysis with A-F grades for developers (architecture, security, performance, concurrency, accessibility, testing). |
+| `/plain-talk-reportcard` | 2.0.0 | Codebase analysis with A-F grades and plain-language summaries for non-technical stakeholders. |
 | `/review-changes` | 1.0.0 | Pre-commit review of staged changes for bugs, style issues, and missing tests. |
 | `/dead-code-scanner` | 1.0.0 | Find unused code after refactors or as ongoing hygiene. |
 
@@ -88,9 +88,11 @@ These commands complement [Axiom](https://github.com/CharlesWiltgen/Axiom) for i
 
 | This Plugin | Axiom Skills |
 |-------------|--------------|
-| `/security-audit` | `/axiom:axiom-security-privacy-scanner` |
-| `/performance-check` | `/axiom:axiom-swift-performance`, `/axiom:axiom-swiftui-performance` |
-| `/debug` | `/axiom:axiom-memory-debugging`, `/axiom:axiom-hang-diagnostics` |
-| `/generate-tests` | `/axiom:axiom-swift-testing`, `/axiom:axiom-testing-async` |
+| `/tech-talk-reportcard` | `axiom-swiftui-architecture`, `axiom-ios-performance`, `axiom-ios-concurrency`, `axiom-ios-accessibility`, `axiom-ios-testing` |
+| `/plain-talk-reportcard` | `axiom-ios-accessibility`, `axiom-ios-ui`, `axiom-hig` |
+| `/security-audit` | `axiom-storage-diag`, `axiom-file-protection-ref` |
+| `/performance-check` | `axiom-swift-performance`, `axiom-swiftui-performance`, `axiom-ios-performance` |
+| `/debug` | `axiom-memory-debugging`, `axiom-hang-diagnostics` |
+| `/generate-tests` | `axiom-swift-testing`, `axiom-testing-async` |
 
 For schema migrations, use Axiom directly: `/axiom:axiom-swiftdata-migration`

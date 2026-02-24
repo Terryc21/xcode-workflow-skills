@@ -1,0 +1,157 @@
+# Layer 3: Issue Catalog Template
+# Aggregate all issues found during audit
+
+audit:
+  project: "Your App Name"
+  audit_date: "YYYY-MM-DD"
+  auditor: "Name or AI"
+
+  # Summary counts
+  total_issues: 0
+  by_severity:
+    critical: 0
+    high: 0
+    medium: 0
+    low: 0
+
+# Issue catalog
+issues:
+  # Critical Example: Dead End
+  - id: "issue-001"
+    category: "dead_end"
+    severity: "critical"
+
+    entry_point:
+      id: "promo-001"
+      label: "Feature X Card"
+      file: "DashboardView.swift"
+      line: 100
+      action: "selectedSection = .tools"
+
+    expected: "Feature X opens"
+    actual: "Tools section (Feature X not there)"
+
+    user_impact: |
+      User taps card expecting Feature X, lands on Tools,
+      cannot find Feature X. Goal cannot be completed.
+
+    root_cause: |
+      Card action navigates to wrong destination.
+      Feature X is accessed from item detail, not Tools.
+
+    recommendation: |
+      Create FeatureXPickerSheet following item-context pattern.
+      Card should: activeSheet = .featureXPicker
+
+    effort: "high"
+    fix_files:
+      - "Models/SheetType.swift"
+      - "Views/SheetContent.swift"
+      - "Views/FeatureXPickerSheet.swift (new)"
+      - "DashboardView.swift"
+
+    related_issues: []
+    flow_trace: "flow-001"  # Reference to Layer 2 trace
+
+  # High Example: Incomplete Navigation
+  - id: "issue-002"
+    category: "incomplete_navigation"
+    severity: "high"
+
+    entry_point:
+      id: "promo-002"
+      label: "Price Watch"
+      file: "DashboardView.swift"
+      line: 120
+      action: "selectedSection = .tools"
+
+    expected: "Price Watch feature visible"
+    actual: "Tools section top (must scroll to find)"
+
+    user_impact: |
+      User lands on Tools, must scroll past other tools
+      to find Price Watch. 2-3 extra steps.
+
+    root_cause: |
+      No deep linking or sheet presentation.
+      Card navigates to section, not feature.
+
+    recommendation: |
+      Add .priceWatch sheet type and use activeSheet.
+
+    effort: "low"
+    fix_files:
+      - "Models/SheetType.swift"
+      - "Views/SheetContent.swift"
+      - "DashboardView.swift"
+
+    related_issues: ["issue-003"]  # Similar pattern
+    flow_trace: "flow-002"
+
+  # Medium Example: Two-Step Flow (acceptable)
+  - id: "issue-003"
+    category: "two_step_flow"
+    severity: "medium"
+
+    entry_point:
+      id: "promo-003"
+      label: "AI Assistant"
+      file: "DashboardView.swift"
+      line: 140
+      action: "activeSheet = .aiPicker"
+
+    expected: "AI assistance for an item"
+    actual: "Must select item first, then AI"
+
+    user_impact: |
+      One extra tap. Acceptable because AI needs item context.
+
+    root_cause: |
+      Feature requires item selection - two-step is intentional.
+
+    recommendation: |
+      ACCEPTABLE. Could optimize: if only 1 item, skip picker.
+
+    effort: "low"
+    fix_files:
+      - "Views/AIPicker.swift (optimization only)"
+
+    related_issues: []
+    flow_trace: "flow-003"
+
+# Pattern analysis
+patterns_found:
+  good_patterns:
+    - description: "Sheet-based feature access"
+      count: 15
+      example: "activeSheet = .settings"
+
+    - description: "Item picker for context-dependent features"
+      count: 3
+      example: "AppleCareTrackingSheet pattern"
+
+  problematic_patterns:
+    - description: "Section navigation for feature discovery"
+      count: 2
+      issues: ["issue-002", "issue-003"]
+      fix: "Replace with sheet presentation"
+
+    - description: "Navigation without state setup"
+      count: 1
+      issues: ["issue-004"]
+      fix: "Add state activation after navigation"
+
+# Fix priority queue
+fix_order:
+  - issue_id: "issue-001"
+    reason: "Critical - blocks user goal"
+    effort: "high"
+
+  - issue_id: "issue-002"
+    reason: "High - causes confusion"
+    effort: "low"
+
+  - issue_id: "issue-003"
+    reason: "Medium - acceptable friction"
+    effort: "low"
+    notes: "Optional optimization"

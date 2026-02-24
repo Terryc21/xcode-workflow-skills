@@ -1,0 +1,181 @@
+# Layer 4: Semantic Evaluation Template
+# Evaluate workflows from user perspective
+
+audit:
+  project: "Your App Name"
+  evaluation_date: "YYYY-MM-DD"
+
+# User personas (adapt to your app)
+personas:
+  - id: "persona-001"
+    name: "New User"
+    goal: "Discover what the app can do"
+    key_workflows:
+      - "See onboarding"
+      - "Explore dashboard cards"
+      - "Try main features"
+
+  - id: "persona-002"
+    name: "Power User"
+    goal: "Complete tasks efficiently"
+    key_workflows:
+      - "Quick access to frequent features"
+      - "Bulk operations"
+      - "Keyboard shortcuts"
+
+  - id: "persona-003"
+    name: "Occasional User"
+    goal: "Find specific feature when needed"
+    key_workflows:
+      - "Search for feature"
+      - "Navigate via menus"
+      - "Complete one task and leave"
+
+# Goal categories
+goal_categories:
+  discovery:
+    description: "User exploring what app can do"
+    success_criteria: "Features are discoverable from main screen"
+
+  action:
+    description: "User wants to do specific thing"
+    success_criteria: "Task completed in minimal steps"
+
+  problem_solving:
+    description: "User has a problem to solve"
+    success_criteria: "Relevant feature surfaces contextually"
+
+  optimization:
+    description: "User wants to improve existing data"
+    success_criteria: "Enhancement features are findable"
+
+# Workflow evaluations
+evaluations:
+  - id: "eval-001"
+    workflow: "Add new item"
+    persona: "persona-001"
+    goal_category: "action"
+
+    criteria:
+      discoverability:
+        rating: "excellent"  # excellent | good | fair | poor
+        reason: "Prominent + button on every screen"
+
+      path_efficiency:
+        rating: "optimal"  # optimal | acceptable | suboptimal | broken
+        steps: 2
+        path: ["Tap +", "Fill form and save"]
+        optimal_possible: 2
+        gap: 0
+
+      feedback_clarity:
+        rating: "clear"  # clear | adequate | unclear | misleading
+        reason: "Success toast, item visible in list"
+
+      error_recovery:
+        rating: "graceful"  # graceful | acceptable | frustrating | catastrophic
+        reason: "Cancel available, validation messages clear"
+
+    overall_rating: "excellent"
+    improvement_opportunity: null
+
+  - id: "eval-002"
+    workflow: "Feature X from promotion card"
+    persona: "persona-002"
+    goal_category: "problem_solving"
+
+    criteria:
+      discoverability:
+        rating: "good"
+        reason: "Card appears when relevant condition met"
+
+      path_efficiency:
+        rating: "broken"
+        steps: "infinite"
+        path: ["Tap card", "Land on wrong section", "Cannot find feature"]
+        optimal_possible: 2
+        gap: "Goal unreachable"
+
+      feedback_clarity:
+        rating: "unclear"
+        reason: "No indication that navigation is wrong"
+
+      error_recovery:
+        rating: "frustrating"
+        reason: "Must dismiss card or find feature elsewhere"
+
+    overall_rating: "broken"
+    improvement_opportunity: "Fix dead end - see issue-001"
+
+# Evaluation matrix summary
+matrix:
+  # workflow: [discovery, efficiency, feedback, recovery, overall]
+  "Add Item":         ["excellent", "optimal", "clear", "graceful", "Excellent"]
+  "Feature X Card":   ["good", "broken", "unclear", "frustrating", "BROKEN"]
+  "Settings Access":  ["good", "optimal", "clear", "graceful", "Good"]
+  "Bulk Operations":  ["good", "suboptimal", "adequate", "acceptable", "Fair"]
+
+# Semantic issues (user-impact focused)
+semantic_issues:
+  - id: "sem-001"
+    title: "Broken Promise"
+    severity: "critical"
+    workflow: "Feature X from card"
+
+    promise: "Card says 'Get Feature X help'"
+    expectation: "Tool to help with X opens"
+    reality: "Lands on wrong section, feature not there"
+    user_feeling: "Frustration, distrust of cards"
+
+    issue_ref: "issue-001"
+    fix_priority: "immediate"
+
+  - id: "sem-002"
+    title: "Scroll Tax"
+    severity: "high"
+    workflow: "Price Watch from card"
+
+    promise: "Card says 'Track prices'"
+    expectation: "Price tracking opens immediately"
+    reality: "Land on Tools, must scroll to find"
+    user_feeling: "Mild annoyance, wasted time"
+
+    issue_ref: "issue-002"
+    fix_priority: "before release"
+
+# Design principle violations
+principle_violations:
+  - principle: "Honor the Promise"
+    violations: ["sem-001"]
+    recommendation: "Cards should open features directly"
+
+  - principle: "Context-Aware Shortcuts"
+    violations: []
+    recommendation: "Skip pickers when only 1 eligible item"
+
+  - principle: "State Preservation"
+    violations: ["sem-003"]
+    recommendation: "Set expected mode when navigating"
+
+# Overall assessment
+assessment:
+  summary: |
+    Brief narrative of workflow health.
+    X workflows evaluated. Y critical issues found.
+
+  strengths:
+    - "Good pattern: centralized sheet management"
+    - "Good pattern: contextual promotion cards"
+
+  weaknesses:
+    - "Some cards navigate to sections instead of features"
+    - "Missing state setup on navigation"
+
+  recommendations:
+    immediate:
+      - "Fix critical dead end in Feature X flow"
+    before_release:
+      - "Convert section navigation to sheet presentation"
+      - "Add state setup for bulk operations"
+    future:
+      - "Optimize two-step flows when only 1 item"

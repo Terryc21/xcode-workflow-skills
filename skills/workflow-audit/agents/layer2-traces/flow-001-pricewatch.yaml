@@ -1,0 +1,127 @@
+# Flow Trace: Price Watch Promotion Card
+# ID: flow-001
+# Severity: 🟠 HIGH
+# Issue: Incomplete navigation - user must scroll to find feature
+
+flow_trace:
+  id: "flow-001"
+  name: "Price Watch from Dashboard Promotion Card"
+  entry_point: "promo-priceWatch"
+  severity: "high"
+  issue_type: "incomplete_navigation"
+
+steps:
+  - step: 1
+    actor: "User"
+    action: "Sees Price Watch promotion card on Dashboard"
+    file: "DashboardView+PromotionCards.swift"
+    line: 73
+    condition: "!hasUsedPriceWatch && !hasDismissedPriceWatch"
+    ui_element: "CompactPromotionCard with orange chart icon"
+
+  - step: 2
+    actor: "User"
+    action: "Taps Price Watch card"
+    file: "DashboardView+PromotionCards.swift"
+    line: 78
+    code: "action: { selectedSection = .tools }"
+
+  - step: 3
+    actor: "System"
+    action: "Updates selectedSection binding"
+    file: "AppNavigationView.swift"
+    result: "NavigationSplitView switches to Tools section"
+
+  - step: 4
+    actor: "System"
+    action: "Renders ToolsView"
+    file: "ToolsView.swift"
+    line: 55
+    result: "ScrollView displays tool categories in order"
+
+  - step: 5
+    actor: "User"
+    action: "Lands on top of Tools view"
+    observation: "Sees 'Capture' category (barcodeScanner, csvImport)"
+    issue: "Price Watch not visible without scrolling"
+
+  - step: 6
+    actor: "User"
+    action: "Must scroll down to find Price Watch"
+    file: "ToolCategory.swift"
+    line: 54
+    observation: |
+      Price Watch is in category 3 (.analysis "Decisions")
+      Position: 2nd tool after Stuff Scout
+      User must scroll past:
+        1. Capture (2 tools)
+        2. Export (1 tool)
+        3. Decisions header
+        4. Stuff Scout card
+      Then they see Price Watch
+
+  - step: 7
+    actor: "User"
+    action: "Taps Price Watch tool card"
+    file: "ToolsView.swift"
+    line: 229-230
+    code: |
+      case .priceWatch:
+          showingPriceWatch = true
+
+  - step: 8
+    actor: "System"
+    action: "Shows PriceWatchView as sheet"
+    file: "ToolsView.swift"
+    line: 120-122
+    result: "User can now track prices"
+
+expected_journey:
+  steps: 3
+  flow:
+    - "Tap promotion card"
+    - "See Price Watch immediately"
+    - "Start tracking prices"
+
+actual_journey:
+  steps: 5
+  flow:
+    - "Tap promotion card"
+    - "Land on top of Tools section"
+    - "Scroll through Capture and Export categories"
+    - "Find Price Watch in Decisions category"
+    - "Tap Price Watch card"
+    - "Start tracking prices"
+
+gap_analysis:
+  extra_steps: 2
+  user_confusion_risk: "medium"
+  completion_rate_impact: "Some users may not find the feature"
+  issue_summary: |
+    The promotion card promises quick access to Price Watch
+    but deposits the user at the top of a multi-category tool grid.
+    Users expecting to land directly on the feature may be confused
+    or think the card is broken.
+
+recommendations:
+  option_a:
+    approach: "Show PriceWatchView directly as sheet"
+    change: "action: { activeSheet = .priceWatch }"
+    file: "DashboardView+PromotionCards.swift:78"
+    effort: "Low (1 line change)"
+    pros: "Immediate access, consistent with other promotion cards"
+    cons: "None"
+
+  option_b:
+    approach: "Deep link with scroll target"
+    change: "Pass scrollTarget to ToolsView, auto-scroll to section"
+    effort: "Medium (requires ScrollViewReader + anchor)"
+    pros: "User sees context of where feature lives"
+    cons: "More complex, animation delay"
+
+  preferred: "option_a"
+  rationale: |
+    Most promotion cards already use sheet presentation.
+    This is the simpler and more consistent approach.
+    The existing infrastructure supports it (DashboardSheetType
+    already has .priceWatch case via ToolsView).

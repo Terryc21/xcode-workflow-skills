@@ -1,0 +1,94 @@
+# Layer 1: Entry Point Inventory Template
+# Copy this file and fill in for your project
+
+project:
+  name: "Your App Name"
+  scan_date: "YYYY-MM-DD"
+  sources_path: "Sources/"
+
+# Patterns used for discovery (adapt to your project)
+discovery_patterns:
+  sheet_triggers:
+    pattern: "activeSheet = \\."
+    files_found: 0
+
+  section_navigation:
+    pattern: "selectedSection = \\."
+    files_found: 0
+
+  promotion_cards:
+    pattern: "PromotionCard\\s*\\("
+    files_found: 0
+
+  context_menus:
+    pattern: "\\.contextMenu"
+    files_found: 0
+
+  swipe_actions:
+    pattern: "\\.swipeActions"
+    files_found: 0
+
+  navigation_links:
+    pattern: "NavigationLink\\s*\\("
+    files_found: 0
+
+# Entry point catalog
+entry_points:
+  # Example promotion card
+  - id: "promo-001"
+    type: "promotion_card"
+    label: "Example Feature"
+    file: "DashboardView.swift"
+    line: 100
+    action: "activeSheet = .exampleFeature"
+    action_type: "sheet"  # sheet | navigation | state_change | direct_action
+    destination: ".exampleFeature"
+    condition: "showExampleCard"  # When is this entry point visible?
+    flags: []  # two_step_flow | incomplete_navigation | no_feedback | orphaned
+
+  # Example navigation entry
+  - id: "nav-001"
+    type: "navigation_link"
+    label: "Settings"
+    file: "SidebarView.swift"
+    line: 50
+    action: "selectedSection = .settings"
+    action_type: "navigation"
+    destination: "SettingsView"
+    condition: "always"
+    flags: []
+
+  # Example context menu
+  - id: "ctx-001"
+    type: "context_menu"
+    label: "Delete Item"
+    file: "ItemRow.swift"
+    line: 80
+    action: "showingDeleteConfirmation = true"
+    action_type: "state_change"
+    destination: "confirmationDialog"
+    condition: "item != nil"
+    flags: []
+
+# Summary statistics
+summary:
+  total_entry_points: 0
+  by_type:
+    promotion_card: 0
+    sheet_trigger: 0
+    navigation_link: 0
+    context_menu: 0
+    swipe_action: 0
+    toolbar_item: 0
+
+  flagged_for_review:
+    two_step_flow: 0
+    incomplete_navigation: 0
+    no_feedback: 0
+    orphaned: 0
+
+# Notes from discovery
+notes:
+  - "Add observations about patterns discovered"
+  - "Note any project-specific conventions"
+  - "List any files that need manual review"

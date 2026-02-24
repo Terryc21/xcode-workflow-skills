@@ -1,0 +1,333 @@
+# Layer 1: Entry Point Inventory
+# Generated: 2026-02-23
+# Project: Stuffolio v1.0
+
+metadata:
+  scan_date: "2026-02-23"
+  total_entry_points: ~200
+  categories:
+    promotion_cards: 7
+    sheet_triggers: 70+
+    navigation_links: 6
+    context_menus: 12
+    swipe_actions: 9
+    toolbar_items: TBD
+    boolean_triggers: 155  # needs filtering
+
+# =============================================================================
+# PROMOTION CARDS (Feature Discovery)
+# =============================================================================
+# These are contextual suggestions shown on the Dashboard
+
+promotion_cards:
+  - id: "promo-stuffScout"
+    label: "Try Stuff Scout"
+    file: "DashboardView+PromotionCards.swift"
+    line: 41
+    action: "activeSheet = .stuffScout"
+    action_type: "sheet"
+    destination: "StuffScoutView"
+    condition: "!hasScannedWithScout && !hasDismissedStuffScout"
+
+  - id: "promo-quickFind"
+    label: "Quick Find"
+    file: "DashboardView+PromotionCards.swift"
+    line: 57
+    action: "activeSheet = .quickFind"
+    action_type: "sheet"
+    destination: "QuickFindSheetWrapper"
+    condition: "!hasUsedQuickFind && !hasDismissedQuickFind"
+
+  - id: "promo-priceWatch"
+    label: "Price Watch"
+    file: "DashboardView+PromotionCards.swift"
+    line: 73
+    action: "selectedSection = .tools"
+    action_type: "navigation"
+    destination: "ToolsView (Price Watch section)"
+    condition: "!hasUsedPriceWatch && !hasDismissedPriceWatch"
+    notes: "Navigates to Tools but doesn't deep-link to Price Watch"
+
+  - id: "promo-appleCare"
+    label: "Track AppleCare+"
+    file: "DashboardView+PromotionCards.swift"
+    line: 89
+    action: "activeSheet = .appleCareTracking"
+    action_type: "sheet"
+    destination: "AppleCareTrackingSheet"
+    condition: "!hasDismissedAppleCareSuggestion && hasUntrackedAppleProducts"
+
+  - id: "promo-repairAdvisor"
+    label: "Repair Advisor"
+    file: "DashboardView+PromotionCards.swift"
+    line: 104
+    action: "selectedSection = .tools"
+    action_type: "navigation"
+    destination: "ToolsView (Repair Advisor section)"
+    condition: "!hasDismissedRepairAdvisorSuggestion && hasDamagedItems"
+    notes: "Navigates to Tools but doesn't deep-link to Repair Advisor"
+
+  - id: "promo-bulkOperations"
+    label: "Bulk Actions"
+    file: "DashboardView+PromotionCards.swift"
+    line: 119
+    action: "selectedSection = .myProducts"
+    action_type: "navigation"
+    destination: "MyProductsView"
+    condition: "!hasUsedSelectMode && allItems.count >= 5"
+    notes: "Navigates to My Products but doesn't activate Select mode"
+
+# =============================================================================
+# SHEET TRIGGERS (activeSheet enum cases)
+# =============================================================================
+# Central sheet management via DashboardSheetType enum
+
+sheet_types:
+  # Core CRUD
+  - case: "addProduct"
+    destination: "AddItemWithChooser"
+    file: "DashboardView+SheetContent.swift:21"
+
+  - case: "scanner"
+    destination: "ScannerView"
+    file: "DashboardView+SheetContent.swift:24"
+
+  - case: "search"
+    destination: "SuperSearchView"
+    file: "DashboardView+SheetContent.swift:27"
+
+  - case: "quickFind"
+    destination: "QuickFindSheetWrapper"
+    file: "DashboardView+SheetContent.swift:31"
+
+  # Data Management
+  - case: "csvImport"
+    destination: "ImportDataSheet"
+    file: "DashboardView+SheetContent.swift:45"
+
+  - case: "backup"
+    destination: "BackupRestoreView"
+    file: "DashboardView+SheetContent.swift:48"
+
+  - case: "restore"
+    destination: "RestoreDataSheet"
+    file: "DashboardView+SheetContent.swift:56"
+
+  # Tools & Features
+  - case: "recalls"
+    destination: "RecallCheckerView"
+    file: "DashboardView+SheetContent.swift:59"
+
+  - case: "aiAssistant"
+    destination: "AIProductPickerSheet"
+    file: "DashboardView+SheetContent.swift:62"
+    notes: "Two-step flow: picker then AI assistant"
+
+  - case: "audit"
+    destination: "AuditModeView"
+    file: "DashboardView+SheetContent.swift:85"
+
+  - case: "loans"
+    destination: "BorrowedLentView"
+    file: "DashboardView+SheetContent.swift:88"
+
+  - case: "inventoryInsights"
+    destination: "InventoryInsightsView"
+    file: "DashboardView+SheetContent.swift:91"
+
+  - case: "valueCalculator"
+    destination: "ValueCalculatorView"
+    file: "DashboardView+SheetContent.swift:94"
+
+  - case: "coverageInsights"
+    destination: "CoverageInsightsView"
+    file: "DashboardView+SheetContent.swift:97"
+
+  - case: "depreciation"
+    destination: "DepreciationTrackingView"
+    file: "DashboardView+SheetContent.swift:100"
+
+  - case: "inventoryReport"
+    destination: "InventoryReportView"
+    file: "DashboardView+SheetContent.swift:103"
+
+  - case: "bulkEdit"
+    destination: "BulkEditSelectionView"
+    file: "DashboardView+SheetContent.swift:108"
+
+  - case: "locations"
+    destination: "LocationOverviewView"
+    file: "DashboardView+SheetContent.swift:112"
+
+  # Settings & System
+  - case: "notifications"
+    destination: "NotificationSettingsView"
+    file: "DashboardView+SheetContent.swift:115"
+
+  - case: "cloudSync"
+    destination: "AccountSyncSettingsView"
+    file: "DashboardView+SheetContent.swift:118"
+
+  - case: "settings"
+    destination: "SettingsView"
+    file: "DashboardView+SheetContent.swift:121"
+
+  - case: "about"
+    destination: "AboutView"
+    file: "DashboardView+SheetContent.swift:124"
+
+  - case: "help"
+    destination: "HelpDocumentationView"
+    file: "DashboardView+SheetContent.swift:127"
+
+  - case: "activity"
+    destination: "iOSActivityTabView"
+    file: "DashboardView+SheetContent.swift:130"
+
+  # Feature Discovery
+  - case: "stuffScout"
+    destination: "StuffScoutView"
+    file: "DashboardView+SheetContent.swift:148"
+
+  - case: "dashboardCustomization"
+    destination: "DashboardCustomizationSheet"
+    file: "DashboardView+SheetContent.swift:152"
+
+  - case: "ratingInsights"
+    destination: "RatingInsightsView"
+    file: "DashboardView+SheetContent.swift:156"
+
+  - case: "legacyWishes"
+    destination: "LegacyWishesView"
+    file: "DashboardView+SheetContent.swift:167"
+
+  - case: "maintenance"
+    destination: "MaintenanceSuggestionsView"
+    file: "DashboardView+SheetContent.swift:177"
+
+  - case: "donateVsSell"
+    destination: "DonateVsSellAdvisorView"
+    file: "DashboardView+SheetContent.swift:180"
+
+  - case: "photoOptimizer"
+    destination: "PhotoOptimizerView"
+    file: "DashboardView+SheetContent.swift:190"
+
+  - case: "appleCareTracking"
+    destination: "AppleCareTrackingSheet"
+    file: "DashboardView+SheetContent.swift:200"
+
+# =============================================================================
+# CONTEXT MENUS (Right-click / Long-press actions)
+# =============================================================================
+
+context_menu_files:
+  - file: "ItemDetailContent.swift"
+    purpose: "Item detail actions"
+
+  - file: "EnhancedItemRows.swift"
+    purpose: "Item list row actions"
+
+  - file: "LegacyAssignmentFormView.swift"
+    purpose: "Legacy wish assignment actions"
+
+  - file: "InventoryReportView.swift"
+    purpose: "Report actions"
+
+  - file: "MyProductsItemRow.swift"
+    purpose: "Product list item actions"
+
+  - file: "GalleryPhotoCell.swift"
+    purpose: "Photo gallery actions"
+
+  - file: "BulkDeleteExtension.swift"
+    purpose: "Bulk selection actions"
+
+  - file: "DepreciationTrackingView.swift"
+    purpose: "Depreciation item actions"
+
+  - file: "EnhancedItemDetailView+Support.swift"
+    purpose: "Support interaction actions"
+
+  - file: "EnhancedItemDetailView+Images.swift"
+    purpose: "Image management actions"
+
+  - file: "MultiPhotoCaptureView.swift"
+    purpose: "Photo capture actions"
+
+  - file: "BeneficiariesListView.swift"
+    purpose: "Beneficiary management actions"
+
+# =============================================================================
+# SWIPE ACTIONS (List row gestures)
+# =============================================================================
+
+swipe_action_files:
+  - file: "SocialMediaLinksView.swift"
+    purpose: "Social link management"
+
+  - file: "MyProductsItemRow.swift"
+    purpose: "Quick item actions (edit, delete, archive)"
+
+  - file: "BulkDeleteExtension.swift"
+    purpose: "Bulk delete actions"
+
+  - file: "ScoutHistoryView.swift"
+    purpose: "Scout history management"
+
+  - file: "InventoryPreferencesView.swift"
+    purpose: "Preference row actions"
+
+  - file: "RMAListView.swift"
+    purpose: "RMA management"
+
+  - file: "SupportInteractionHistoryView.swift"
+    purpose: "Support history management"
+
+  - file: "MaintenanceTaskListView.swift"
+    purpose: "Maintenance task actions"
+
+  - file: "BeneficiariesListView.swift"
+    purpose: "Beneficiary row actions"
+
+# =============================================================================
+# POTENTIAL WORKFLOW ISSUES (Layer 2 will investigate)
+# =============================================================================
+
+flags_for_layer2:
+  incomplete_navigation:
+    - id: "promo-priceWatch"
+      issue: "Navigates to Tools but doesn't scroll to Price Watch section"
+
+    - id: "promo-repairAdvisor"
+      issue: "Navigates to Tools but doesn't scroll to Repair Advisor section"
+
+    - id: "promo-bulkOperations"
+      issue: "Navigates to My Products but doesn't activate Select mode"
+
+  two_step_flows:
+    - id: "aiAssistant"
+      issue: "Requires item picker before showing AI assistant"
+
+    - id: "appleCareTracking"
+      issue: "Requires product selection before editing warranty"
+
+  high_complexity_files:
+    - file: "DashboardView.swift"
+      sheet_triggers: 30+
+      notes: "Central navigation hub - many entry points"
+
+    - file: "EnhancedItemDetailView.swift"
+      boolean_triggers: 15+
+      notes: "Many showing* state variables"
+
+# =============================================================================
+# NEXT STEPS (Layer 2)
+# =============================================================================
+
+layer2_tasks:
+  - "Trace each entry point to its destination view"
+  - "Map the full user journey for flagged workflows"
+  - "Identify dead ends and missing feedback"
+  - "Catalog confirmation dialogs and their triggers"
+  - "Find orphaned destinations (views with no entry points)"

@@ -1,0 +1,143 @@
+# Flow Trace: Repair Advisor Promotion Card
+# ID: flow-002
+# Severity: 🔴 CRITICAL
+# Issue: WRONG DESTINATION - Feature exists but card links to Tools instead
+
+flow_trace:
+  id: "flow-002"
+  name: "Repair Advisor from Dashboard Promotion Card"
+  entry_point: "promo-repairAdvisor"
+  severity: "critical"
+  issue_type: "dead_end"
+
+steps:
+  - step: 1
+    actor: "User"
+    action: "Sees Repair Advisor promotion card on Dashboard"
+    file: "DashboardView+PromotionCards.swift"
+    line: 104
+    condition: "!hasDismissedRepairAdvisorSuggestion && hasDamagedItems"
+    ui_element: "CompactPromotionCard with yellow wrench icon"
+    card_title: "Repair Advisor"
+    card_subtitle: "You have X damaged items — get repair guidance"
+
+  - step: 2
+    actor: "User"
+    action: "Taps Repair Advisor card"
+    file: "DashboardView+PromotionCards.swift"
+    line: 110
+    code: "action: { selectedSection = .tools }"
+
+  - step: 3
+    actor: "System"
+    action: "Navigates to Tools section"
+    file: "ToolsView.swift"
+    result: "Tools grid displayed"
+
+  - step: 4
+    actor: "User"
+    action: "Searches for 'Repair Advisor'"
+    observation: "No tool named 'Repair Advisor' in ToolsView"
+    issue: "CRITICAL - Card links to wrong destination"
+
+  - step: 5
+    actor: "User"
+    action: "User is stranded"
+    observation: |
+      The ACTUAL feature exists elsewhere!
+
+      FEATURE: "Repair, Keep, or Replace?"
+      LOCATION: Features/RepairKeepReplace/Views/RepairKeepReplaceView.swift
+      ACCESS: From item detail view only (EnhancedItemDetailView)
+
+      The feature:
+        - Analyzes a specific item
+        - Shows repair options, brand history
+        - Helps decide: repair, keep as-is, or replace
+        - REQUIRES an item to be selected first
+
+      But the promotion card:
+        - Navigates to generic Tools section
+        - Tools section has NO link to this feature
+        - User cannot find it from here
+
+expected_journey:
+  steps: 2
+  flow:
+    - "Tap Repair Advisor card"
+    - "Get repair guidance for damaged items"
+
+actual_journey:
+  steps: "∞ (never completes)"
+  flow:
+    - "Tap Repair Advisor card"
+    - "Land on Tools section"
+    - "Search for Repair Advisor"
+    - "Cannot find it"
+    - "Confusion / frustration"
+    - "Abandon task or dismiss card"
+
+gap_analysis:
+  extra_steps: "N/A - goal unreachable via current path"
+  user_confusion_risk: "VERY HIGH"
+  completion_rate_impact: "0% from card - feature only accessible from item detail"
+  issue_summary: |
+    CRITICAL BUG: The "Repair Advisor" promotion card links to the
+    WRONG DESTINATION. The feature EXISTS but is accessed differently:
+
+    FEATURE: "Repair, Keep, or Replace?" (RepairKeepReplaceView)
+    ACTUAL ACCESS: Item Detail → More menu → "Repair, Keep, or Replace?"
+    REQUIRES: Specific item selection first
+
+    The promotion card condition is `hasDamagedItems` - these users
+    HAVE damaged items that need this exact tool. But the card
+    sends them to Tools where the feature doesn't exist.
+
+    This is similar to the AppleCare+ card issue that was just fixed -
+    both features require item selection before showing the view.
+
+correct_workflow:
+  similar_pattern: "AppleCare+ Tracking (flow recently fixed)"
+  flow:
+    - "Show list of damaged items"
+    - "User selects an item"
+    - "Open RepairKeepReplaceView for that item"
+
+recommendations:
+  option_a:
+    approach: "Create DamagedItemsPickerSheet (like AppleCareTrackingSheet)"
+    changes:
+      - "Create DamagedItemsPickerSheet.swift"
+      - "Add .damagedItemsPicker to DashboardSheetType"
+      - "Show sheet with damaged items list"
+      - "On item selection, open RepairKeepReplaceView"
+    effort: "Medium (follow AppleCare pattern)"
+    pros: "Proper flow, reuses proven pattern, feature works"
+    cons: "Two-step flow, but necessary for item context"
+
+  option_b:
+    approach: "Rename card and link to AI Assistant for repair help"
+    change: |
+      - Rename to "Get Repair Help"
+      - Link to AI Assistant with repair-focused context
+    effort: "Low"
+    pros: "Quick fix, AI can provide repair guidance"
+    cons: "Doesn't use the dedicated RepairKeepReplaceView"
+
+  option_c:
+    approach: "Link directly to first damaged item"
+    change: |
+      - Get first damaged item from hasDamagedItems
+      - Open RepairKeepReplaceView directly
+    effort: "Low"
+    pros: "Immediate access to feature"
+    cons: "User might want different item; no selection choice"
+
+  preferred: "option_a"
+  rationale: |
+    Follow the AppleCare+ pattern that was just implemented.
+    Users with multiple damaged items should be able to choose.
+    The two-step flow is necessary when feature requires item context.
+
+    Implementation is straightforward - copy AppleCareTrackingSheet
+    pattern and adapt for damaged items + RepairKeepReplaceView.
