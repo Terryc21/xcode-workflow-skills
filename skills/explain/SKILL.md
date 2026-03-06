@@ -1,10 +1,10 @@
 ---
 name: explain
 description: 'Deep-dive explanation of how a specific file, feature, or data flow works. Triggers: "explain", "how does X work", "walk me through", "what does this do".'
-version: 1.1.0
+version: 2.0.0
 author: Terry Nyberg
 license: MIT
-allowed-tools: [Read, Grep, Glob, LSP]
+allowed-tools: [Read, Grep, Glob, LSP, Write]
 metadata:
   tier: reference
   category: analysis
@@ -16,32 +16,21 @@ metadata:
 
 **YOU MUST EXECUTE THIS WORKFLOW. Do not just describe it.**
 
-Deep-dive explanation of how a specific file, feature, or data flow works.
-
-## Quick Commands
-
-| Command | Description |
-|---------|-------------|
-| `/explain ItemDetailView.swift` | Explain a specific file |
-| `/explain "warranty tracking"` | Explain a feature by name |
-| `/explain "how does an item get saved"` | Explain a data flow |
-| `/explain ItemHelper --deps` | Show dependency graph for a type |
-
 ---
 
 ## Step 1: Determine What to Explain
 
 If the user provides a file path, read it directly. If they provide a feature or concept name, find the relevant code:
 
-```
+```bash
 # Find files by name
 Glob pattern="**/*FeatureName*.swift"
 
 # Find files that mention the feature/concept
-Grep pattern="FeatureKeyword" glob="*.swift" output_mode="files_with_matches"
+Grep pattern="FeatureKeyword" glob="**/*.swift" output_mode="files_with_matches"
 
 # Find the entry point (view, view model, manager)
-Grep pattern="struct.*FeatureName.*View|class.*FeatureName" glob="*.swift" output_mode="content"
+Grep pattern="struct.*FeatureName.*View|class.*FeatureName" glob="**/*.swift" output_mode="content"
 ```
 
 Read every relevant file — don't explain code you haven't read.
@@ -64,12 +53,9 @@ After reading the code, document:
 
 Identify the main types, protocols, and functions:
 
-```
-# List types defined in the file
-Grep pattern="^(class|struct|enum|protocol|actor)\\s+\\w+" path="Sources/Features/FeatureName" glob="*.swift" output_mode="content"
-
-# List public/internal functions
-Grep pattern="^\\s+(func|var|let)\\s+\\w+" path="path/to/file.swift" output_mode="content"
+```bash
+# List types defined in the target directory
+Grep pattern="^(class|struct|enum|protocol|actor)\s+\w+" glob="**/*.swift" output_mode="content"
 ```
 
 Present as a table:
@@ -78,7 +64,6 @@ Present as a table:
 |-----------|---------|----------|
 | `ItemDetailViewModel` | Manages item display and editing state | Sources/Features/ItemDetail/ItemDetailViewModel.swift |
 | `ItemDetailView` | SwiftUI view for displaying item details | Sources/Features/ItemDetail/ItemDetailView.swift |
-| `ItemHelperProtocol` | Abstracts item operations for testability | Sources/Helpers/ItemHelperProtocol.swift |
 
 ---
 
@@ -135,22 +120,19 @@ ItemDetailView re-renders with details
 
 ### Upstream (what this code depends on)
 
-```
+```bash
 # Find imports
-Grep pattern="^import " path="path/to/file.swift" output_mode="content"
+Grep pattern="^import " path="<target_file>" output_mode="content"
 
 # Find injected dependencies
-Grep pattern="init\\(" path="path/to/file.swift" output_mode="content"
-
-# Find protocol conformances
-Grep pattern=":\\s*\\w+Protocol|:\\s*\\w+Delegate" path="path/to/file.swift" output_mode="content"
+Grep pattern="init\(" path="<target_file>" output_mode="content"
 ```
 
 ### Downstream (what depends on this code)
 
-```
+```bash
 # Find all files that reference this type
-Grep pattern="TypeName" glob="*.swift" output_mode="files_with_matches"
+Grep pattern="TypeName" glob="**/*.swift" output_mode="files_with_matches"
 ```
 
 **Depends on:** [list with file paths]
@@ -193,8 +175,11 @@ Include a "Quick Reference" section at the end:
 
 ---
 
-## See Also
+## Troubleshooting
 
-- `/implementation-plan` — When you understand the code and want to plan changes
-- `/debug` — When explanation reveals a potential bug
-- `/safe-refactor` — When explanation shows refactoring opportunities
+| Problem | Solution |
+|---------|----------|
+| Can't find the feature | Try broader search: `Grep pattern="keyword" glob="**/*.swift"` |
+| Feature spans many files | Start from the View, trace to ViewModel, then to Services |
+| Code uses unfamiliar pattern | Explain the pattern inline — the user may not know it either |
+| LSP not available | Fall back to Grep for finding references and definitions |

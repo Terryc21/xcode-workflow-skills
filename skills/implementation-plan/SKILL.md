@@ -1,7 +1,7 @@
 ---
 name: implementation-plan
 description: Structured implementation planning with file impact analysis, dependencies, and phased tasks
-version: 1.0.0
+version: 1.1.0
 author: Terry Nyberg
 license: MIT
 allowed-tools: [Glob, Grep, Read, AskUserQuestion]
@@ -27,16 +27,6 @@ metadata:
 **Required output:** Every task/issue MUST include Urgency, Risk, ROI, and Blast Radius ratings. Do not omit these ratings.
 
 Create detailed implementation plans with impact analysis, phased tasks, and risk assessment.
-
-## Quick Commands
-
-| Command | Description |
-|---------|-------------|
-| `/implementation-plan` | Interactive — prompts for work type, risk, timeline |
-| `/implementation-plan add search feature` | Direct — starts with feature description |
-| `/implementation-plan --phase=1` | Show only Phase A tasks |
-
----
 
 ## Step 1: Interactive Input
 
@@ -118,13 +108,13 @@ Scan the codebase using these tools:
 ```
 # Find files related to the feature area
 Glob pattern="**/*FeatureName*.swift"
-Grep pattern="FeatureKeyword" glob="*.swift" output_mode="files_with_matches"
+Grep pattern="FeatureKeyword" glob="**/*.swift" output_mode="files_with_matches"
 
 # Find existing patterns to follow
-Grep pattern="class.*ViewModel|struct.*View.*body" glob="*.swift" output_mode="files_with_matches"
+Grep pattern="class.*ViewModel|struct.*View.*body" glob="**/*.swift" output_mode="files_with_matches"
 
 # Find dependencies that will be affected
-Grep pattern="import.*ModuleName|ModuleName\\." glob="*.swift" output_mode="files_with_matches"
+Grep pattern="import.*ModuleName|ModuleName\\." glob="**/*.swift" output_mode="files_with_matches"
 
 # Find test files for affected areas
 Glob pattern="Tests/**/*FeatureName*Tests.swift"
@@ -293,10 +283,3 @@ Step 6: Risk — Low (additive change, no existing code modified)
 Step 7: Test Plan — Unit tests for filter matching, empty query, case sensitivity
 ```
 
----
-
-## See Also
-
-- `/safe-refactor` — When the plan involves restructuring existing code
-- `/review-changes` — Review each phase before committing
-- `/generate-tests` — Generate tests for new functionality

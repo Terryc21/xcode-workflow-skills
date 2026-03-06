@@ -1,10 +1,10 @@
 ---
 name: run-tests
-description: Run tests with smart execution strategies - parallel, sequential, or split (UI sequential + unit parallel)
-version: 1.0.0
+description: 'Run tests with smart execution strategies - parallel, sequential, or split (UI sequential + unit parallel). Triggers: "run tests", "run my tests", "execute tests".'
+version: 2.0.0
 author: Terry Nyberg
 license: MIT
-allowed-tools: [mcp__XcodeBuildMCP, Bash]
+allowed-tools: [Bash, Glob, Grep, Read, AskUserQuestion]
 metadata:
   tier: execution
   category: testing
@@ -12,107 +12,138 @@ metadata:
 
 # Run Tests
 
-> **Quick Ref:** Smart test execution with split strategies (UI sequential + unit parallel). Supports `--unattended` for hands-off runs.
+> **Quick Ref:** Smart test execution with split strategies (UI sequential + unit parallel).
 
 **YOU MUST EXECUTE THIS WORKFLOW. Do not just describe it.**
 
-Execute tests with configurable parallelization strategy.
+---
 
-## Execution Strategies
+## Step 1: Detect Test Configuration
 
-| Strategy | Flag | UI Tests | Unit Tests | Best For |
-|----------|------|----------|------------|----------|
-| **Smart Split** (Recommended) | `--split` | Sequential | Parallel | Daily development |
-| **All Sequential** | `--sequential` | Sequential | Sequential | Maximum stability |
-| **All Parallel** | `--parallel` | Parallel | Parallel | CI with clean state |
+```bash
+# Find available schemes
+xcodebuild -list -json 2>/dev/null | head -30
 
-## Usage
+# Find test targets
+Glob pattern="**/*Tests.swift"
+Glob pattern="**/*UITests*.swift"
+```
 
-Ask which strategy to use, then execute accordingly.
+Identify:
+- **Scheme name** — from `xcodebuild -list`
+- **UI test target** — typically `<AppName>UITests`
+- **Unit test target** — typically `<AppName>Tests`
 
-### Strategy 1: Smart Split (Recommended)
+---
 
-Best balance of speed and stability. UI tests run sequentially (avoids clone issues), unit tests run in parallel (fast).
+## Step 2: Choose Strategy
+
+```
+AskUserQuestion with questions:
+[
+  {
+    "question": "Which test execution strategy?",
+    "header": "Strategy",
+    "options": [
+      {"label": "Smart Split (Recommended)", "description": "UI tests sequential + unit tests parallel — best balance"},
+      {"label": "All Sequential", "description": "Maximum stability, slowest execution"},
+      {"label": "All Parallel", "description": "Fastest, may have simulator clone issues"},
+      {"label": "Unit tests only", "description": "Skip UI tests — faster feedback"}
+    ],
+    "multiSelect": false
+  }
+]
+```
+
+---
+
+## Step 3: Execute Tests
+
+### Strategy: Smart Split (Recommended)
 
 ```bash
 # Step 1: Run UI tests sequentially
 xcodebuild test \
   -scheme <SCHEME> \
-  -destination 'platform=iOS Simulator,name=<SIMULATOR>' \
+  -destination 'platform=iOS Simulator,name=iPhone 16' \
   -only-testing:<UI_TEST_TARGET> \
-  -parallel-testing-enabled NO
+  -parallel-testing-enabled NO \
+  2>&1 | tail -20
 
 # Step 2: Run unit tests in parallel
 xcodebuild test \
   -scheme <SCHEME> \
-  -destination 'platform=iOS Simulator,name=<SIMULATOR>' \
+  -destination 'platform=iOS Simulator,name=iPhone 16' \
   -skip-testing:<UI_TEST_TARGET> \
-  -parallel-testing-enabled YES
-```
-
-**Via XcodeBuildMCP:**
-```
-# UI tests sequential
-test_sim({ extraArgs: ["-only-testing:StuffolioUITests", "-parallel-testing-enabled", "NO"] })
-
-# Unit tests parallel
-test_sim({ extraArgs: ["-skip-testing:StuffolioUITests", "-parallel-testing-enabled", "YES"] })
-```
-
-### Strategy 2: All Sequential
-
-Maximum stability. Use when experiencing any test flakiness.
-
-```bash
-xcodebuild test \
-  -scheme <SCHEME> \
-  -destination 'platform=iOS Simulator,name=<SIMULATOR>' \
-  -parallel-testing-enabled NO
-```
-
-**Via XcodeBuildMCP:**
-```
-test_sim({ extraArgs: ["-parallel-testing-enabled", "NO"] })
-```
-
-### Strategy 3: All Parallel
-
-Fastest execution. Use with clean simulator state or in CI.
-
-```bash
-xcodebuild test \
-  -scheme <SCHEME> \
-  -destination 'platform=iOS Simulator,name=<SIMULATOR>' \
   -parallel-testing-enabled YES \
-  -maximum-concurrent-test-simulator-destinations 2
+  2>&1 | tail -20
 ```
 
-**Via XcodeBuildMCP:**
+### Strategy: All Sequential
+
+```bash
+xcodebuild test \
+  -scheme <SCHEME> \
+  -destination 'platform=iOS Simulator,name=iPhone 16' \
+  -parallel-testing-enabled NO \
+  2>&1 | tail -20
 ```
-test_sim({ extraArgs: ["-parallel-testing-enabled", "YES", "-maximum-concurrent-test-simulator-destinations", "2"] })
+
+### Strategy: All Parallel
+
+```bash
+xcodebuild test \
+  -scheme <SCHEME> \
+  -destination 'platform=iOS Simulator,name=iPhone 16' \
+  -parallel-testing-enabled YES \
+  -maximum-concurrent-test-simulator-destinations 2 \
+  2>&1 | tail -20
 ```
 
-## Time Estimates
+### Strategy: Unit Tests Only
 
-Based on Stuffolio (~4,700 total tests, ~195 UI tests):
+```bash
+xcodebuild test \
+  -scheme <SCHEME> \
+  -destination 'platform=iOS Simulator,name=iPhone 16' \
+  -skip-testing:<UI_TEST_TARGET> \
+  2>&1 | tail -20
+```
 
-| Strategy | Estimated Time | Notes |
-|----------|---------------|-------|
-| All Parallel | ~15-22 min | May have clone failures |
-| Smart Split | ~50-60 min | UI sequential (~45 min) + unit parallel (~5 min) |
-| All Sequential | ~60-75 min | Most stable, slowest |
+---
 
-**Why UI tests are slow:**
-- Each test launches the app fresh (~2-3 sec)
-- Simulator animations and delays
-- `waitForExistence` timeouts (up to 3-5 sec each)
-- Setup/teardown overhead
+## Step 4: Report Results
 
-**Rule of thumb:** ~15-30 seconds per UI test when run sequentially.
+Parse the output and present:
 
-## Pre-Run Cleanup (Optional)
+```markdown
+## Test Results
 
-If experiencing clone issues, run cleanup first:
+**Strategy:** Smart Split
+**Duration:** X minutes
+
+| Target | Tests | Passed | Failed |
+|--------|-------|--------|--------|
+| Unit Tests | N | N | 0 |
+| UI Tests | N | N | 0 |
+| **Total** | **N** | **N** | **0** |
+```
+
+If failures occurred, list each:
+
+```markdown
+## Failures
+
+| Test | Error | File |
+|------|-------|------|
+| testName | Expected X but got Y | File.swift:45 |
+```
+
+---
+
+## Pre-Run Cleanup (If Needed)
+
+If experiencing simulator issues, offer cleanup:
 
 ```bash
 # Kill zombie simulators
@@ -122,67 +153,18 @@ killall Simulator 2>/dev/null
 # Delete cloned simulators
 xcrun simctl delete unavailable
 
-# Optional: Clean DerivedData
+# Optional: Clean DerivedData for this project
 rm -rf ~/Library/Developer/Xcode/DerivedData/<PROJECT>-*
 ```
 
-## Unattended Mode
-
-To run tests while away from the computer, use `/run-tests --unattended`.
-
-**What this does:**
-- Skips the strategy selection prompt (uses Smart Split by default, or specify with `--sequential` / `--parallel`)
-- Uses XcodeBuildMCP tools which don't require per-command approval
-- Runs cleanup, then tests, then reports results
-
-**Example invocations:**
-```
-/run-tests --unattended              # Smart Split (default)
-/run-tests --unattended --sequential # All sequential
-/run-tests --unattended --parallel   # All parallel
-/run-tests --unattended --cleanup    # Run cleanup before tests
-```
-
-**Permissions required (approve once before leaving):**
-| Tool | Permission | Approve With |
-|------|------------|--------------|
-| XcodeBuildMCP | `test_sim` | Auto-allowed (MCP tool) |
-| XcodeBuildMCP | `boot_sim` | Auto-allowed (MCP tool) |
-| Bash | `xcrun simctl` | "Always allow" when prompted |
-| Bash | `killall Simulator` | "Always allow" when prompted |
-
-**Tip:** If using `--cleanup`, approve the Bash permissions once, then Claude will remember for the session.
-
-## Workflow
-
-### Interactive Mode (default)
-1. **Ask user** which strategy they want (default: Smart Split)
-2. **Detect** the UI test target name from the project
-3. **Execute** using XcodeBuildMCP or xcodebuild
-4. **Report** results with pass/fail counts
-
-### Unattended Mode (`--unattended`)
-1. **Skip prompts** - use specified or default strategy
-2. **Run cleanup** if `--cleanup` flag present
-3. **Execute** using XcodeBuildMCP (no approval needed)
-4. **Report** results when complete
-
-## Auto-Detection
-
-To find the UI test target:
-```bash
-# List schemes and targets
-xcodebuild -list -project <PROJECT>.xcodeproj
-```
-
-Common UI test target patterns:
-- `<AppName>UITests`
-- `<AppName>-UITests`
-- `UITests`
-
 ---
 
-## See Also
+## Troubleshooting
 
-- `/generate-tests` - Generate new tests before running
-- `/ui-scan` - Set up UI test environment with onboarding bypass
+| Problem | Solution |
+|---------|----------|
+| "Unable to boot simulator" | Run `xcrun simctl shutdown all` then retry |
+| Parallel tests fail but sequential pass | Use Smart Split strategy |
+| "No such module" error | Clean DerivedData and rebuild |
+| UI tests time out | Increase `waitForExistence` timeout or use sequential mode |
+| Can't find scheme | Run `xcodebuild -list` to see available schemes |
