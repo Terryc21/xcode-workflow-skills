@@ -1,7 +1,7 @@
 ---
 name: safe-refactor
 description: 'Plan refactoring with blast radius analysis, dependency mapping, and rollback strategy. Triggers: "refactor", "safe refactor", "restructure", "rename type", "extract protocol".'
-version: 1.1.0
+version: 2.0.0
 author: Terry Nyberg
 license: MIT
 allowed-tools: [Glob, Grep, Read, Bash, AskUserQuestion]
@@ -16,25 +16,12 @@ metadata:
 
 **YOU MUST EXECUTE THIS WORKFLOW. Do not just describe it.**
 
-Plan refactoring with blast radius analysis, dependency mapping, and rollback strategy.
-
-## Quick Commands
-
-| Command | Description |
-|---------|-------------|
-| `/safe-refactor` | Interactive — prompts for refactoring details |
-| `/safe-refactor ItemViewModel` | Analyze refactoring a specific type |
-| `/safe-refactor --blast-radius ItemHelper` | Show blast radius only |
-| `/safe-refactor --deps NetworkService` | Show dependency map only |
-
 ---
 
 ## Step 1: Gather Refactoring Details
 
-Use AskUserQuestion if the user hasn't provided enough detail:
-
 ```
-questions:
+AskUserQuestion with questions:
 [
   {
     "question": "What kind of refactoring?",
@@ -42,7 +29,7 @@ questions:
     "options": [
       {"label": "Rename/Move", "description": "Rename a type, function, or move files to a new location"},
       {"label": "Extract", "description": "Extract protocol, split type, pull out shared code"},
-      {"label": "Restructure", "description": "Change architecture pattern (e.g., add view model, change dependency injection)"},
+      {"label": "Restructure", "description": "Change architecture pattern (e.g., add view model, change DI)"},
       {"label": "Simplify", "description": "Reduce complexity, remove duplication, flatten hierarchy"}
     ],
     "multiSelect": false
@@ -61,12 +48,12 @@ Collect:
 
 ### 1.1: Identify Target Code
 
-```
+```bash
 # Find the target type/file
 Glob pattern="**/*TargetName*.swift"
 
 # Read the target code
-Read file_path="Sources/Features/ItemDetail/ItemDetailViewModel.swift"
+Read file_path="<path_to_target>"
 ```
 
 ### 1.2: Document Current State
@@ -82,13 +69,12 @@ After reading, note:
 
 ### 2.1: Upstream Dependencies (what target imports/uses)
 
-```
+```bash
 # Find imports in the target file
-Grep pattern="^import " path="Sources/Features/ItemDetail/ItemDetailViewModel.swift" output_mode="content"
+Grep pattern="^import " path="<target_file>" output_mode="content"
 
 # Find types referenced in the target file
-# (Look for type names used in properties, function params, return types)
-Grep pattern=":\\s*\\w+Service|:\\s*\\w+Manager|:\\s*\\w+Repository" path="Sources/Features/ItemDetail/ItemDetailViewModel.swift" output_mode="content"
+Grep pattern=":\s*\w+Service|:\s*\w+Manager|:\s*\w+Repository" path="<target_file>" output_mode="content"
 ```
 
 Record:
@@ -97,19 +83,15 @@ Record:
 |------------|------|-----------------|
 | NetworkService | Protocol | Low — protocol won't change |
 | Item | Model | Medium — property access may change |
-| SwiftData | Framework | Low — stable API |
 
 ### 2.2: Downstream Dependents (what imports/uses target)
 
-```
+```bash
 # Find all files that reference the target type
-Grep pattern="ItemDetailViewModel" glob="*.swift" output_mode="files_with_matches"
-
-# Find all files that import the target's module (if multi-module)
-Grep pattern="import FeatureModule" glob="*.swift" output_mode="files_with_matches"
+Grep pattern="TargetTypeName" glob="**/*.swift" output_mode="files_with_matches"
 
 # Find all usages of the target's public/internal API
-Grep pattern="\\.targetMethod\\(|targetProperty" glob="*.swift" output_mode="content"
+Grep pattern="\.targetMethod\(|targetProperty" glob="**/*.swift" output_mode="content"
 ```
 
 Record:
@@ -118,7 +100,7 @@ Record:
 |-----------|------|--------------------------|
 | ItemDetailView.swift | View | Must update — directly uses view model |
 | ItemListView.swift | View | Low — only creates the view model |
-| ItemDetailViewModelTests.swift | Test | Must update — tests all public API |
+| Tests/ItemViewModelTests.swift | Test | Must update — tests all public API |
 
 ---
 
@@ -126,27 +108,26 @@ Record:
 
 ### 3.1: Calculate Direct, Immediate, and Transitive Impact
 
-```
-# Direct: Files being modified
-# (the target file itself)
+```bash
+# Direct: The target file itself
 
 # Immediate: Files that directly reference the target
-Grep pattern="TargetTypeName" glob="*.swift" output_mode="files_with_matches"
+Grep pattern="TargetTypeName" glob="**/*.swift" output_mode="files_with_matches"
 
 # Transitive: Files that reference the immediate dependents
-# (For each immediate file, search for ITS references)
-Grep pattern="ImmediateTypeName" glob="*.swift" output_mode="files_with_matches"
+# For each immediate file, search for ITS references
+Grep pattern="ImmediateTypeName" glob="**/*.swift" output_mode="files_with_matches"
 ```
 
 ### 3.2: Summarize Blast Radius
 
 | Risk Level | Files | Description |
 |------------|-------|-------------|
-| Direct | 1 | ItemDetailViewModel.swift |
-| Immediate | 3 | ItemDetailView, ItemListView, tests |
-| Transitive | 0 | No further dependencies |
+| Direct | 1 | Target file |
+| Immediate | N | Files that reference target |
+| Transitive | N | Files that reference immediate dependents |
 
-**Total Blast Radius:** 4 files
+**Total Blast Radius:** N files
 
 ---
 
@@ -158,16 +139,13 @@ Before refactoring, verify:
 # Ensure clean git state
 git status --short
 
-# Ensure all tests pass before starting
-xcodebuild test -scheme AppName -destination 'platform=iOS Simulator,name=iPhone 16' -quiet 2>&1 | tail -5
-
 # Check for uncommitted work
 git stash list
 ```
 
-- [ ] All existing tests pass
 - [ ] Code is committed (clean git state)
 - [ ] All usages of the code being changed are understood (from Phase 2)
+- [ ] All existing tests pass (verify if needed)
 
 ---
 
@@ -214,7 +192,7 @@ After each step:
 
 - [ ] Build succeeds (no compiler errors or warnings)
 - [ ] All tests pass
-- [ ] Manual smoke test: [specific action to verify, e.g., "open item detail screen"]
+- [ ] Manual smoke test: [specific action to verify]
 
 ---
 
@@ -271,9 +249,12 @@ Phase 7 — Verify: Build + tests after each step ✓
 
 ---
 
-## See Also
+## Troubleshooting
 
-- `/implementation-plan` — For larger feature work with phased implementation
-- `/review-changes` — Pre-commit review before each refactoring step
-- `/dead-code-scanner` — Find orphaned code after refactoring
-- `/scan-similar-bugs` — Find similar patterns after refactoring one instance
+| Problem | Solution |
+|---------|----------|
+| Blast radius too large (>20 files) | Consider parallel implementation or incremental approach |
+| Can't find all dependents | Search for the type name as a string, not just usage patterns |
+| Tests fail after step | Revert the step, re-analyze, try a smaller change |
+| Circular dependencies found | Break the cycle first as a separate preparatory step |
+| Rename causes test failures | Update tests in the same commit as the rename |
