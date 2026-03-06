@@ -131,9 +131,12 @@ Grep pattern="[^I]!" glob="**/*.swift"
 
 # Bare try? swallowing errors silently
 # FALSE POSITIVE: try? in optional chaining where nil is the expected fallback
+# INTENTIONAL: try? for operations where failure is acceptable (e.g., file deletion, optional conversion)
 Grep pattern="try\?" glob="**/*.swift"
 
-# TODO/FIXME/HACK markers
+# TODO/FIXME/HACK markers — self-documented technical debt
+# These are INTENTIONAL markers, not bugs. Count them for code health grading
+# but do not list individual TODOs as issues in the Issue Rating Table
 Grep pattern="(TODO|FIXME|HACK|XXX):" glob="**/*.swift"
 ```
 
@@ -160,7 +163,8 @@ Grep pattern="(print|NSLog|os_log|Logger).*\b(password|token|secret|key|credenti
 
 ```bash
 # @Query without predicate (full table scans)
-# CLASSIFY: COUNT_ONLY (.count access → use fetchCount), FILTER_THEN_USE, or FULL_ACCESS (OK)
+# CLASSIFY: COUNT_ONLY (.count access → use fetchCount), FILTER_THEN_USE, or FULL_ACCESS
+# INTENTIONAL: views that genuinely need all records (e.g., "show all items" list) are OK
 Grep pattern="@Query\s+(private\s+)?var" glob="**/*.swift"
 
 # Main thread file I/O
@@ -203,6 +207,8 @@ Grep pattern="nonisolated.*func" glob="**/*.swift"
 
 ```bash
 # Fixed font sizes (breaks Dynamic Type)
+# INTENTIONAL: some hardcoded sizes prevent clipping in constrained containers
+# Read each hit — classify as CONFIRMED (should migrate) or INTENTIONAL (constrained layout)
 Grep pattern="\.font\(\.system\(size:" glob="**/*.swift"
 
 # Check for accessibilityLabel coverage
@@ -261,6 +267,7 @@ Grep pattern="SchemaMigrationPlan" glob="**/*.swift"
 Grep pattern="NSManagedObject|NSPersistentContainer" glob="**/*.swift"
 
 # UserDefaults for non-trivial data (should use proper persistence)
+# INTENTIONAL: simple preferences (theme, sort order, last-opened tab) are appropriate for UserDefaults
 Grep pattern="UserDefaults\.standard\.(set|object)" glob="**/*.swift"
 ```
 
@@ -274,6 +281,7 @@ Grep patterns produce CANDIDATES, not confirmed issues. Before reporting ANY fin
 2. **Check structural context** — a pattern inside a nested closure may be safe depending on the outer scope
 3. **Classify before reporting** — label each hit as CONFIRMED, FALSE_POSITIVE, or INTENTIONAL
 4. **Never report grep counts as issue counts** — e.g., "60 DispatchQueue.main calls" is a grep count; the real issue count requires classifying each call
+5. **INTENTIONAL hits** — note them in the category narrative as acknowledged design decisions (they support grading), but do NOT list them in the Issue Rating Table as issues
 
 **Common false positives:**
 - `Task {}` inside `@MainActor` class/view body → inherits isolation, safe
