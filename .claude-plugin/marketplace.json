@@ -1,15 +1,15 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "xcode-workflow-skills",
-  "description": "Xcode development workflow skills - testing, debugging, refactoring, release prep, and code analysis with Axiom integration",
+  "description": "Xcode development workflow skills - testing, debugging, refactoring, release prep, and code analysis",
   "owner": {
     "name": "Terry Nyberg"
   },
   "plugins": [
     {
       "name": "xcode-workflow-skills",
-      "description": "Xcode development workflow skills - testing, debugging, refactoring, release prep, and code analysis with Axiom integration",
-      "version": "2.0.0",
+      "description": "Xcode development workflow skills - testing, debugging, refactoring, release prep, and code analysis",
+      "version": "2.2.0",
       "author": {
         "name": "Terry Nyberg"
       },
