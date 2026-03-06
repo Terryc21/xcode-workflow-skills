@@ -1,7 +1,7 @@
 ---
 name: safe-refactor
 description: 'Plan refactoring with blast radius analysis, dependency mapping, and rollback strategy. Triggers: "refactor", "safe refactor", "restructure", "rename type", "extract protocol".'
-version: 2.1.0
+version: 2.2.0
 author: Terry Nyberg
 license: MIT
 allowed-tools: [Glob, Grep, Read, Bash, Edit, Write, LSP, AskUserQuestion]
@@ -45,7 +45,105 @@ If "Commit first": Ask for a commit message, stage changed files, and commit. Th
 
 ---
 
-## Step 1: Gather Refactoring Details
+## Step 1: Identify Refactoring Candidates
+
+Scan for files exceeding file size thresholds and display a risk assessment table.
+
+### 1.1: Find Oversized Files
+
+Check CLAUDE.md for project-specific file size guidelines. If none exist, use these defaults:
+
+| Type | Pattern | Target | Refactor Trigger |
+|------|---------|--------|-----------------|
+| Views | `*View*.swift` | <400 | >600 lines |
+| ViewModels | `*ViewModel*.swift` | <300 | >500 lines |
+| Managers/Services | `*Manager*.swift`, `*Service*.swift` | <400 | >600 lines |
+| Models | `*Model*.swift`, `*+*.swift`, `*Enums*.swift` | <600 | >1000 lines |
+
+```bash
+# First: check CLAUDE.md for project-specific thresholds
+Grep pattern="File Size|Split When|lines" path="CLAUDE.md" output_mode="content"
+# If found, use those thresholds instead of the defaults above
+
+# Find files exceeding thresholds (exclude Tests/ and generated code)
+# Adjust the numeric thresholds below if CLAUDE.md defines different values
+
+# Views over trigger
+find Sources -name "*View*.swift" -not -path "*/Tests/*" -exec wc -l {} + | sort -rn | awk '$1 > 600 {print}'
+
+# ViewModels over trigger
+find Sources -name "*ViewModel*.swift" -exec wc -l {} + | sort -rn | awk '$1 > 500 {print}'
+
+# Managers/Services over trigger
+find Sources \( -name "*Manager*.swift" -o -name "*Service*.swift" \) -not -path "*/Tests/*" -exec wc -l {} + | sort -rn | awk '$1 > 600 {print}'
+
+# Models over trigger
+find Sources \( -name "*Model*.swift" -o -name "*Enums*.swift" \) -not -path "*/Tests/*" | xargs wc -l | sort -rn | awk '$1 > 1000 {print}'
+```
+
+### 1.2: Gather Risk Metrics
+
+For each oversized file, collect:
+
+```bash
+# For each file: line count, function count, #if os blocks, struct/class/extension blocks
+lines=$(wc -l < "$file")
+funcs=$(grep -cE "^\s+(func |private func |static func )" "$file")
+platform=$(grep -cE "#if os\(|#if canImport" "$file")
+blocks=$(grep -cE "^(struct|class|extension|enum) " "$file")
+
+# Check for test coverage
+find Tests -name "*${basename}*" | wc -l
+```
+
+### 1.3: Display Risk Assessment Table
+
+Present one table per file type, using the Issue Rating Table format (from CLAUDE.md if defined, otherwise use the scale below):
+
+```markdown
+## Refactoring Risk Assessment — Oversized Files
+
+### Views (trigger: >600 lines)
+
+| # | File | Lines | Over | Urgency | Risk: Fix | Risk: No Fix | ROI | Blast Radius | Fix Effort | Tests |
+|---|------|-------|------|---------|-----------|-------------|-----|-------------|------------|-------|
+| 1 | `FileName.swift` | N | +N | 🟢/🟡/⚪ | 🟢/🟡/⚪ | 🟢/🟡/⚪ | 🟠/🟢/🟡/🔴 | 🟢/🟡/⚪ | S/M/L | Yes/No/Partial |
+
+### ViewModels (trigger: >500 lines)
+...
+
+### Managers/Services (trigger: >600 lines)
+...
+
+### Models (trigger: >1000 lines)
+...
+```
+
+**Rating scale** (use CLAUDE.md scale if project defines one):
+
+| Indicator | General meaning | ROI meaning |
+|-----------|----------------|-------------|
+| 🔴 | Critical / high concern | Poor return |
+| 🟡 | High / notable | Marginal return |
+| 🟢 | Medium / moderate | Good return |
+| ⚪ | Low / negligible | — |
+| 🟠 | Pass / positive | Excellent return |
+
+**Rating guidelines for file-size refactoring:**
+- **Urgency**: 🟡 High if file is actively being modified (frequent merge conflicts); 🟢 Medium if over by >100 lines; ⚪ Low if barely over threshold
+- **Risk: Fix**: 🟡 High if many `#if os` blocks (>8) or no test coverage; 🟢 Medium if moderate complexity; ⚪ Low if isolated
+- **Risk: No Fix**: 🟡 High if causing merge conflicts or blocking other work; 🟢 Medium if growing; ⚪ Low if stable
+- **ROI**: 🔴 Poor if barely over threshold (<20 lines); 🟡 Marginal if high blast radius; 🟢 Good if isolated with clear split points; 🟠 Excellent if blocking other work
+- **Blast Radius**: Based on downstream dependents (grep for type name usage)
+- **Fix Effort**: Small (<2h), Medium (2-4h), Large (4h+)
+
+If no files exceed thresholds, report "All files within size guidelines — no refactoring candidates found" and skip to Step 2.
+
+---
+
+## Step 2: Gather Refactoring Details
+
+If Step 1 found candidates, ask the user to pick a target. Otherwise, ask what they want to refactor.
 
 ```
 AskUserQuestion with questions:
@@ -65,7 +163,7 @@ AskUserQuestion with questions:
 ```
 
 Collect:
-- **Target code** — What's being refactored
+- **Target code** — What's being refactored (from Step 1 table or user-specified)
 - **Reason** — Tech debt, performance, readability, pattern change
 - **Desired end state** — How it should look after
 
