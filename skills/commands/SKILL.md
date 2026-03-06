@@ -39,7 +39,7 @@ metadata:
 |---------|---------|-------------|
 | `/plan` | 1.2.0 | Epic decomposition into trackable tasks. Audit-aware mode ingests report card findings. |
 | `/implementation-plan` | 1.1.0 | *(Deprecated — use `/plan` instead)* Structured implementation planning. |
-| `/safe-refactor` | 2.1.0 | Plan refactoring with blast radius analysis, dependency mapping, and rollback strategy. |
+| `/safe-refactor` | 2.2.0 | Plan refactoring with blast radius analysis, dependency mapping, and rollback strategy. |
 | `/explain` | 2.1.0 | Deep-dive explanation of how a specific file, feature, or data flow works. |
 
 ## Release & Deployment
