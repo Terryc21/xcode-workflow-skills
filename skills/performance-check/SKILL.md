@@ -1,10 +1,10 @@
 ---
 name: performance-check
-description: Profile-guided performance analysis for memory, CPU, energy, and launch time
-version: 1.0.0
+description: 'Automated performance anti-pattern scan for iOS/macOS apps. Covers memory, CPU, energy, SwiftUI, launch time, and database. Triggers: "performance check", "performance scan", "check performance".'
+version: 2.0.0
 author: Terry Nyberg
 license: MIT
-allowed-tools: [Grep, Glob, Read, AskUserQuestion]
+allowed-tools: [Grep, Glob, Read, Write, AskUserQuestion]
 metadata:
   tier: execution
   category: analysis
@@ -12,41 +12,25 @@ metadata:
 
 # Performance Check
 
-> **Quick Ref:** Automated performance anti-pattern scan for iOS/macOS apps. Output: `.agents/research/YYYY-MM-DD-performance-check.md`
+> **Quick Ref:** Automated performance scan for iOS/macOS apps. Output: `.agents/research/YYYY-MM-DD-performance-check.md`
 
 **YOU MUST EXECUTE THIS WORKFLOW. Do not just describe it.**
 
-Profile-guided performance analysis for memory, CPU, energy, and launch time.
+All findings use the **Issue Rating Table** format. Do not use prose severity tags.
 
 ---
 
-## Quick Commands
-
-| Command | Description |
-|---------|-------------|
-| `/performance-check` | Full interactive analysis |
-| `/performance-check --quick` | Surface scan for obvious issues |
-| `/performance-check --focus=memory` | Scan only for memory issues |
-| `/performance-check --focus=cpu` | Scan only for CPU/main thread issues |
-| `/performance-check --focus=energy` | Scan only for battery/energy issues |
-| `/performance-check --focus=swiftui` | Scan only for SwiftUI performance |
-| `/performance-check --focus=launch` | Scan only for launch time issues |
-
----
-
-## Step 1: Interactive Scope Selection
-
-Use AskUserQuestion to determine analysis scope:
+## Step 1: Scope Selection
 
 ```
-questions:
+AskUserQuestion with questions:
 [
   {
     "question": "What type of performance analysis do you want?",
     "header": "Scope",
     "options": [
-      {"label": "Full analysis (Recommended)", "description": "Scan all categories: memory, CPU, energy, SwiftUI, launch"},
-      {"label": "Quick surface scan", "description": "Fast check for obvious anti-patterns only"},
+      {"label": "Full analysis (Recommended)", "description": "All categories: memory, CPU, energy, SwiftUI, launch, database"},
+      {"label": "Quick scan", "description": "Memory + CPU only — highest-impact categories"},
       {"label": "Focused analysis", "description": "I'll specify which areas to focus on"}
     ],
     "multiSelect": false
@@ -54,10 +38,10 @@ questions:
 ]
 ```
 
-If "Focused analysis" selected, ask which categories:
+If "Focused analysis", ask which categories:
 
 ```
-questions:
+AskUserQuestion with questions:
 [
   {
     "question": "Which performance areas should I analyze?",
@@ -66,25 +50,24 @@ questions:
       {"label": "Memory & Retain Cycles", "description": "Leaks, strong reference cycles, large allocations"},
       {"label": "CPU & Main Thread", "description": "Blocking operations, main thread violations"},
       {"label": "Energy & Battery", "description": "Location, timers, background work"},
-      {"label": "SwiftUI Performance", "description": "View body complexity, unnecessary updates"},
-      {"label": "Launch Time", "description": "App init work, synchronous operations"}
+      {"label": "SwiftUI Performance", "description": "View body complexity, unnecessary updates"}
     ],
     "multiSelect": true
   }
 ]
 ```
 
-Ask about known issues:
+Ask about symptoms:
 
 ```
-questions:
+AskUserQuestion with questions:
 [
   {
     "question": "Have you noticed any specific performance issues?",
     "header": "Symptoms",
     "options": [
-      {"label": "No issues noticed", "description": "App feels responsive, running scan proactively"},
-      {"label": "Slow loading", "description": "Dashboard or lists take time to load"},
+      {"label": "No issues noticed", "description": "Running scan proactively"},
+      {"label": "Slow loading", "description": "Lists or screens take time to appear"},
       {"label": "Memory growth", "description": "Memory increases over time"},
       {"label": "UI jank", "description": "Scrolling or animations stutter"},
       {"label": "Battery drain", "description": "App uses excessive battery"}
@@ -94,463 +77,341 @@ questions:
 ]
 ```
 
+**Symptom-based priority:** If symptoms are reported, double-weight the matching category in grading:
+- Slow loading → CPU & Launch Time
+- Memory growth → Memory
+- UI jank → SwiftUI + CPU
+- Battery drain → Energy
+
+### Freshness
+
+Base all findings on current source code only. Do not read or reference
+files in `.agents/`, `scratch/`, or prior audit reports. Ignore cached
+findings from auto-memory or previous sessions. Every finding must come
+from scanning the actual codebase as it exists now.
+
 ---
 
 ## Step 2: Automated Scanning
 
-Execute grep patterns for each enabled category.
+Run patterns for each enabled category. **Quick scan** runs only 2.1 and 2.2. **Full analysis** runs all sections.
+
+Every grep hit is a CANDIDATE — verify by reading the file before reporting (see Step 3).
 
 ### 2.1 Memory & Retain Cycles
 
-**Search for retain cycle patterns:**
+```bash
+# Closures without weak self — IN CLASSES ONLY
+# FALSE POSITIVE: SwiftUI struct views don't need [weak self]
+# Only flag closures in *ViewModel*, *Manager*, *Service*, *Controller* files
+Grep pattern="\.sink\s*\{[^}]*self\." glob="**/*ViewModel*.swift"
+Grep pattern="\.sink\s*\{[^}]*self\." glob="**/*Manager*.swift"
+Grep pattern="\.sink\s*\{[^}]*self\." glob="**/*Service*.swift"
 
-```
-# Closures without weak/unowned self
-Grep pattern="\{\s*\[?(?!weak|unowned).*self\." glob="*.swift"
-Grep pattern="\.sink\s*\{[^}]*self\." glob="*.swift"
-Grep pattern="\.receive\s*\([^)]*\)\s*\{[^}]*self\." glob="*.swift"
-Grep pattern="Task\s*\{[^}]*self\." glob="*.swift"
-
-# Timer leaks (timers not invalidated)
-Grep pattern="Timer\.(scheduledTimer|publish)" glob="*.swift"
+# Timer leaks — check if timer is invalidated in deinit/onDisappear
+Grep pattern="Timer\.(scheduledTimer|publish)" glob="**/*.swift"
 
 # NotificationCenter observers not removed
-Grep pattern="NotificationCenter\.default\.addObserver" glob="*.swift"
+# FALSE POSITIVE: addObserver with selector that uses #selector is fine if removeObserver exists
+Grep pattern="NotificationCenter\.default\.addObserver" glob="**/*.swift"
 
-# KVO observers not removed
-Grep pattern="\.addObserver\(.*forKeyPath" glob="*.swift"
-
-# Large array/dictionary literals
-Grep pattern="\[[^\]]{500,}\]" glob="*.swift"
+# Positive signal: proper cleanup patterns
+Grep pattern="\.cancel\(\)" glob="**/*.swift" output_mode="files_with_matches"
+Grep pattern="invalidate\(\)" glob="**/*.swift" output_mode="files_with_matches"
+Grep pattern="removeObserver" glob="**/*.swift" output_mode="files_with_matches"
 ```
 
-**Severity Scoring:**
-
-| Pattern | Severity | Impact |
-|---------|----------|--------|
-| Closure capturing self strongly | HIGH | Memory leak, prevents dealloc |
-| Timer without invalidation | HIGH | Continues firing, prevents dealloc |
-| Observer not removed | MEDIUM | Memory leak, potential crash |
-| Large inline collections | LOW | Memory spike at init |
+**Common false positives:**
+- `self.` inside Task {} in a SwiftUI struct → Task captures struct copy, no cycle
+- Combine `.sink` with `.store(in: &cancellables)` where class has proper deinit → handled
+- Timer that's invalidated in `onDisappear` or `deinit` → check for matching invalidation
 
 ### 2.2 CPU & Main Thread
 
-**Search for main thread violations:**
+```bash
+# Synchronous file I/O in views (main thread blocking)
+# FALSE POSITIVE: FileManager in async/Task context is fine
+# Only flag synchronous calls in view body, computed properties, or onAppear
+Grep pattern="(FileManager|Data\(contentsOf|String\(contentsOf)" glob="**/*View*.swift"
 
-```
-# Synchronous network calls
-Grep pattern="URLSession.*\.dataTask.*\.wait\(\)" glob="*.swift"
-Grep pattern="Data\(contentsOf:\s*URL" glob="*.swift"
-
-# Synchronous file I/O on main thread
-Grep pattern="FileManager.*\.contents\(" glob="*.swift"
-Grep pattern="String\(contentsOf" glob="*.swift"
-
-# Heavy computation patterns
-Grep pattern="for.*in.*\.sorted\(" glob="*.swift"
-Grep pattern="\.filter\(.*\.filter\(" glob="*.swift"
-Grep pattern="\.map\(.*\.map\(.*\.map\(" glob="*.swift"
-
-# Expensive operations in view body
-Grep pattern="var body.*\{[^}]*(DateFormatter|NumberFormatter|JSONDecoder)" glob="*.swift"
-
-# Missing @MainActor
-Grep pattern="DispatchQueue\.main\.(async|sync)" glob="*.swift"
-```
-
-**Check for blocking calls:**
-
-```
-# Thread.sleep on main
-Grep pattern="Thread\.sleep" glob="*.swift"
+# Thread.sleep (any context)
+Grep pattern="Thread\.sleep" glob="**/*.swift"
 
 # Semaphore wait (potential deadlock)
-Grep pattern="\.wait\(\)" glob="*.swift"
+Grep pattern="\.wait\(\)" glob="**/*.swift"
 
-# Synchronous dispatch to main
-Grep pattern="DispatchQueue\.main\.sync" glob="*.swift"
+# Synchronous dispatch to main (deadlock risk)
+Grep pattern="DispatchQueue\.main\.sync" glob="**/*.swift"
+
+# Heavy computation patterns — chained collection operations
+# Read file to check if data set is large enough to matter
+Grep pattern="\.filter\(.*\.filter\(" glob="**/*.swift"
+
+# DispatchQueue.main.async — legacy concurrency
+# CLASSIFY: animation delay (asyncAfter) vs state update (async) vs layout workaround
+Grep pattern="DispatchQueue\.main\.(async|sync)" glob="**/*.swift"
 ```
 
-**Severity Scoring:**
-
-| Pattern | Severity | Impact |
-|---------|----------|--------|
-| Sync network on main | CRITICAL | UI freeze, potential ANR |
-| DispatchQueue.main.sync | HIGH | Deadlock risk |
-| Thread.sleep on main | HIGH | UI unresponsive |
-| Heavy computation in body | MEDIUM | View render delays |
-| Triple-nested map/filter | LOW | CPU spike, can optimize |
+**Common false positives:**
+- `DispatchQueue.main.asyncAfter` for animation timing → intentional
+- `FileManager` inside `Task {}` or async method → runs off main thread
+- `.wait()` on DispatchGroup from background queue → safe
 
 ### 2.3 Energy & Battery
 
-**Search for energy anti-patterns:**
+```bash
+# Continuous location updates (high battery cost)
+Grep pattern="startUpdatingLocation" glob="**/*.swift"
+Grep pattern="allowsBackgroundLocationUpdates\s*=\s*true" glob="**/*.swift"
+Grep pattern="desiredAccuracy.*best" glob="**/*.swift"
 
-```
-# Continuous location updates
-Grep pattern="startUpdatingLocation" glob="*.swift"
-Grep pattern="allowsBackgroundLocationUpdates\s*=\s*true" glob="*.swift"
-Grep pattern="desiredAccuracy.*best" glob="*.swift"
+# Sub-second timers (excessive CPU wake-ups)
+Grep pattern="Timer.*interval:\s*0\." glob="**/*.swift"
 
-# Frequent timers
-Grep pattern="Timer.*interval:\s*[0-1]\." glob="*.swift"
-Grep pattern="Timer.*interval:\s*0\." glob="*.swift"
+# Polling instead of push/observation
+# Read file to check if a reactive pattern (Combine, AsyncSequence) would be better
+Grep pattern="Timer.*interval.*fetch" glob="**/*.swift" -i
 
-# Polling instead of push
-Grep pattern="Timer.*interval.*fetch" glob="*.swift"
+# Continuous animation without pause
+Grep pattern="\.repeatForever\(\)" glob="**/*.swift"
 
-# Background refresh abuse
-Grep pattern="BGAppRefreshTaskRequest" glob="*.swift"
+# Idle timer disabled (screen stays on indefinitely)
+Grep pattern="idleTimerDisabled\s*=\s*true" glob="**/*.swift"
 
-# Animation running continuously
-Grep pattern="\.repeatForever\(\)" glob="*.swift"
-Grep pattern="withAnimation.*\.animation\(.*repeat" glob="*.swift"
-
-# Wake locks / preventing sleep
-Grep pattern="idleTimerDisabled\s*=\s*true" glob="*.swift"
+# Positive signal: significant location (low energy)
+Grep pattern="startMonitoringSignificantLocationChanges" glob="**/*.swift" output_mode="files_with_matches"
 ```
 
-**Severity Scoring:**
-
-| Pattern | Severity | Impact |
-|---------|----------|--------|
-| Continuous location (best accuracy) | HIGH | Significant battery drain |
-| Sub-second timers | MEDIUM | CPU wake-ups, battery |
-| Polling pattern | MEDIUM | Network + CPU overhead |
-| Continuous animation | LOW | GPU usage when visible |
-| Idle timer disabled | LOW | Screen stays on |
+**Common false positives:**
+- `startUpdatingLocation` that's stopped in `onDisappear` or after fix → check for matching stop
+- `desiredAccuracy.*best` in a navigation app → may be required
+- `.repeatForever()` on a loading spinner → appropriate for active UI
 
 ### 2.4 SwiftUI Performance
 
-**Search for SwiftUI anti-patterns:**
+```bash
+# Expensive work in view body — formatters, decoders created every render
+# Read file to check if these are actually inside `var body`
+Grep pattern="DateFormatter\(\)" glob="**/*View*.swift"
+Grep pattern="NumberFormatter\(\)" glob="**/*View*.swift"
+Grep pattern="JSONDecoder\(\)" glob="**/*View*.swift"
 
-```
-# Expensive work in body
-Grep pattern="var body:.*View\s*\{" -A 50 glob="*.swift" | grep -E "(DateFormatter|NumberFormatter|JSONDecoder|try\?|await)"
+# @State with reference types (won't trigger updates properly)
+Grep pattern="@State\s+(private\s+)?var\s+\w+\s*:\s*(NS|UI)" glob="**/*.swift"
 
-# @State with reference types
-Grep pattern="@State\s+(var|let)\s+\w+\s*:\s*(NS|UI|Any|class)" glob="*.swift"
+# GeometryReader overuse (forces layout passes)
+# Read file — GeometryReader is fine in isolated leaf views, problematic when nested
+Grep pattern="GeometryReader" glob="**/*.swift"
 
-# Large bodies (symptom of complexity)
-# Count lines between "var body: some View {" and its closing brace
+# @Query without predicate (full table scans)
+# Read file to check: is .count the only access? → should use fetchCount
+# Does the view filter client-side? → predicate should be on the query
+Grep pattern="@Query\s+(private\s+)?var" glob="**/*.swift"
 
-# Missing lazy loading
-Grep pattern="VStack\s*\{" glob="*.swift"
-Grep pattern="HStack\s*\{" glob="*.swift"
-# (Should use LazyVStack/LazyHStack for long lists)
+# Large view bodies (>80 lines) — check for complexity
+Grep pattern="var body.*some View" glob="**/*View*.swift" output_mode="files_with_matches"
 
-# GeometryReader overuse
-Grep pattern="GeometryReader" glob="*.swift"
-
-# Excessive environmentObject/observedObject
-Grep pattern="@(EnvironmentObject|ObservedObject)" glob="*.swift"
-
-# Animation on entire view hierarchy
-Grep pattern="\.animation\(.*,\s*value:\s*\w+\)" glob="*.swift"
-```
-
-**Check for @Observable/@ObservableObject issues:**
-
-```
-# Published properties that fire too often
-Grep pattern="@Published\s+var\s+\w+\s*=" glob="*.swift"
-
-# ObservableObject without specific property observation
-Grep pattern="class\s+\w+:\s*ObservableObject" glob="*.swift"
+# Positive signal: lazy containers for lists
+Grep pattern="Lazy(V|H)Stack" glob="**/*.swift" output_mode="files_with_matches"
+Grep pattern="Lazy(V|H)Grid" glob="**/*.swift" output_mode="files_with_matches"
 ```
 
-**Severity Scoring:**
-
-| Pattern | Severity | Impact |
-|---------|----------|--------|
-| DateFormatter in body | HIGH | Created every render |
-| @State with class type | HIGH | Won't trigger updates properly |
-| VStack instead of LazyVStack (long list) | MEDIUM | All items rendered |
-| Excessive GeometryReader | MEDIUM | Forces layout passes |
-| Many @Published properties | LOW | Potential over-invalidation |
+**Common false positives:**
+- `DateFormatter()` in a static/cached property → only created once, safe
+- `GeometryReader` in a single leaf view for responsive layout → appropriate
+- `@Query var items` that genuinely needs all items (e.g., total count display) → verify usage
 
 ### 2.5 Launch Time
 
-**Search for launch time issues:**
+```bash
+# Work in App init — read the app entry point file
+Grep pattern="@main" glob="**/*.swift"
+# After finding @main, read that file to check for synchronous work in init()
 
-```
-# Work in App init
-Grep pattern="@main.*struct.*App.*\{" -A 30 glob="*.swift"
-
-# Synchronous operations at launch
-Grep pattern="init\(\).*\{[^}]*(UserDefaults|Keychain|FileManager|URLSession)" glob="*.swift"
-
-# Heavy imports (check for large frameworks)
-Grep pattern="import\s+(AVFoundation|CoreML|Vision|ARKit|SceneKit|SpriteKit)" glob="*.swift"
+# Heavy framework imports (increases binary load time)
+# Read file — only flag if framework is imported but barely used
+Grep pattern="import\s+(AVFoundation|CoreML|Vision|ARKit|SceneKit|SpriteKit)" glob="**/*.swift" output_mode="files_with_matches"
 
 # Analytics/SDK initialization
-Grep pattern="(Firebase|Analytics|Crashlytics|Facebook)\.configure" glob="*.swift"
+Grep pattern="(Firebase|Analytics|Crashlytics)\.configure" glob="**/*.swift"
 
 # Database setup in App init
-Grep pattern="init\(\).*\{[^}]*(ModelContainer|NSPersistentContainer)" glob="*.swift"
+Grep pattern="ModelContainer\(" glob="**/*.swift"
+# Read file — ModelContainer in App.init is normal; flag only if combined with synchronous fetches
 ```
 
-**Severity Scoring:**
-
-| Pattern | Severity | Impact |
-|---------|----------|--------|
-| Sync network at launch | CRITICAL | Launch blocked |
-| Heavy framework import | MEDIUM | Increases binary load |
-| Analytics init in App.init | MEDIUM | Adds to launch time |
-| UserDefaults read in init | LOW | Usually fast |
+**Common false positives:**
+- `import AVFoundation` in a camera-specific file → normal, not a launch issue
+- `ModelContainer` in App struct → standard SwiftData pattern
+- Analytics init → often required to be early; flag only if it blocks UI
 
 ### 2.6 Database / SwiftData
 
-**Search for database performance issues:**
-
-```
-# N+1 query patterns
-Grep pattern="for.*in.*\{[^}]*\.fetch\(" glob="*.swift"
-Grep pattern="\.forEach.*\{[^}]*\.fetch\(" glob="*.swift"
-
-# Large fetches without pagination
-Grep pattern="@Query\s+(var|let)" glob="*.swift"
-Grep pattern="\.fetch\([^)]*\)" glob="*.swift"
-
-# Missing predicates (full table scans)
-Grep pattern="FetchDescriptor<\w+>\(\)" glob="*.swift"
-Grep pattern="@Query\s+var\s+\w+:\s*\[\w+\]" glob="*.swift"
-
-# Synchronous context operations
-Grep pattern="modelContext\.(insert|delete|save)" glob="*.swift"
-```
-
-**Severity Scoring:**
-
-| Pattern | Severity | Impact |
-|---------|----------|--------|
-| N+1 query pattern | HIGH | O(n) database calls |
-| @Query without predicate | MEDIUM | Full table scan |
-| Missing pagination | MEDIUM | Memory spike |
-| Sync save on main | LOW | May block briefly |
-
----
-
-## Step 3: Integration with Instruments
-
-For issues found, suggest Instruments templates to profile:
-
-| Issue Type | Instruments Template | What to Look For |
-|------------|---------------------|------------------|
-| Memory leaks | Leaks | Leaked objects over time |
-| Retain cycles | Allocations | Growth without release |
-| Main thread blocking | Time Profiler | Long calls on main |
-| Energy drain | Energy Log | High CPU/location wake |
-| SwiftUI renders | SwiftUI | View body invocations |
-| Launch time | App Launch | Pre-main and main phases |
-
-To run via command line:
-
 ```bash
-# Record a Time Profiler trace
-xcrun xctrace record --template "Time Profiler" --device "iPhone 16 Pro" --output ./trace.trace --attach "com.yourapp.id"
+# N+1 query patterns — fetching inside a loop
+Grep pattern="for.*in.*\{" glob="**/*.swift"
+# After finding loops, check if .fetch() or ModelContext operations appear inside
 
-# Record a Leaks trace
-xcrun xctrace record --template "Leaks" --device "iPhone 16 Pro" --output ./leaks.trace --attach "com.yourapp.id"
+# FetchDescriptor without predicate (full table scan)
+Grep pattern="FetchDescriptor<\w+>\(\)" glob="**/*.swift"
+
+# Synchronous context saves on main thread
+# FALSE POSITIVE: save() after a single insert in a button action is fine
+Grep pattern="modelContext\.save\(\)" glob="**/*View*.swift"
+
+# Positive signal: batch operations
+Grep pattern="(enumerate|batchInsert|batchDelete)" glob="**/*.swift" output_mode="files_with_matches"
 ```
+
+**Common false positives:**
+- `modelContext.save()` in a button action handler → usually fine (single save)
+- `FetchDescriptor<>()` when the app genuinely needs all records → verify intent
 
 ---
 
-## Step 4: Generate Report
+## Step 3: Verification Rule (CRITICAL)
 
-Write report to `.agents/research/YYYY-MM-DD-performance-check.md`:
+Before reporting ANY finding as a performance issue:
+
+1. **Read the flagged file** — at minimum 20 lines of context around the match
+2. **Check execution context** — code inside `Task {}` or `async` methods runs off main thread
+3. **Check for cleanup** — timer/observer creation needs matching invalidation/removal; check `deinit`, `onDisappear`, `.cancel()`
+4. **SwiftUI struct vs class** — `[weak self]` is only needed in classes, never in SwiftUI struct views
+5. **Classify** — CONFIRMED, FALSE_POSITIVE, or INTENTIONAL before reporting
+
+**Performance-specific false positives:**
+- Closure capturing `self` in a SwiftUI struct → no retain cycle possible
+- `FileManager` usage inside `Task {}` → off main thread, safe
+- `DispatchQueue.main.asyncAfter` with comment about animation → intentional
+- `@Query var items` that's used for display, not just `.count` → appropriate
+- `GeometryReader` in a single leaf view → not a problem
+- Timer with matching `invalidate()` in `deinit` or `onDisappear` → handled
+
+---
+
+## Step 4: Grading
+
+### Grade Criteria
+
+| Grade | Criteria |
+|-------|----------|
+| A | No main-thread blocking, proper memory management, lazy loading, efficient queries |
+| B | Minor issues (1-2 unoptimized queries, formatters that could be cached), good overall patterns |
+| C | Several medium issues (missing lazy containers for large lists, some main-thread I/O, uncached formatters) |
+| D | Significant blocking (synchronous I/O in views, retain cycles, continuous location without need) |
+| F | Critical issues (deadlock risk, memory leaks in core flows, unthrottled timers) |
+
+### Category Grades
+
+Grade each scanned category independently:
+
+| Category | What to Evaluate |
+|----------|--------------------|
+| Memory | Retain cycle risk? Timer/observer cleanup? Proper [weak self] in classes? |
+| CPU & Main Thread | Synchronous I/O in views? Deadlock risk? Legacy DispatchQueue usage? |
+| Energy | Location accuracy appropriate? Timer frequency? Polling vs push? |
+| SwiftUI | Formatters in body? @Query efficiency? Lazy containers? View complexity? |
+| Launch Time | Work in App init? Heavy frameworks? Synchronous setup? |
+| Database | N+1 patterns? Unfiltered fetches? Batch operations used? |
+
+### Overall Grade
+
+Weighted average (symptom-reported categories get 2x weight):
+
+```
+Default weights: Memory 20% | CPU 20% | Energy 15% | SwiftUI 20% | Launch 10% | Database 15%
+```
+
+Convert: A=4, B=3, C=2, D=1, F=0 (with +/- as ±0.3). Multiply by weight, sum, convert back.
+
+---
+
+## Step 5: Output
+
+Write report to `.agents/research/YYYY-MM-DD-performance-check.md`.
+
+### Report Structure
 
 ```markdown
 # Performance Analysis Report
 
-**Date:** YYYY-MM-DD HH:MM
-**Project:** [Project Name]
-**Scan Type:** [Full/Quick/Focused]
+**Date:** YYYY-MM-DD
+**Project:** [name]
+**Scan Type:** Full / Quick / Focused
 **Symptoms Reported:** [None / List]
 
-## Summary
+## Executive Summary
 
-| Category | Grade | Critical | High | Medium | Low |
-|----------|-------|----------|------|--------|-----|
-| Memory & Retain Cycles | A-F | X | X | X | X |
-| CPU & Main Thread | A-F | X | X | X | X |
-| Energy & Battery | A-F | X | X | X | X |
-| SwiftUI Performance | A-F | X | X | X | X |
-| Launch Time | A-F | X | X | X | X |
-| Database | A-F | X | X | X | X |
-| **Overall** | **A-F** | **X** | **X** | **X** | **X** |
+[2-3 sentences: overall performance posture, biggest risk, top recommendation]
 
-## Critical Issues (Fix Immediately)
+## Grade Summary
 
-### 1. [Issue Title]
-**File:** path/to/file.swift:42
-**Severity:** CRITICAL
-**Category:** Memory
-**Impact:** [What happens - e.g., "Memory grows indefinitely, app will be killed by OS"]
+Overall: [grade] (Memory [grade] | CPU [grade] | Energy [grade] | SwiftUI [grade] | Launch [grade] | Database [grade])
 
-```swift
-// Current code (problematic):
-class MyViewController {
-    var completion: (() -> Void)?
+## Positive Findings
 
-    func setup() {
-        completion = {
-            self.doSomething()  // Strong capture of self
-        }
-    }
-}
-```
+[What's done well — lazy loading, proper cleanup, efficient queries, async patterns]
 
-**Remediation:**
-```swift
-// Fixed:
-class MyViewController {
-    var completion: (() -> Void)?
+## Issue Rating Table
 
-    func setup() {
-        completion = { [weak self] in
-            self?.doSomething()
-        }
-    }
-}
-```
-
----
-
-### 2. [Next Issue]
-...
-
-## High Priority Issues
-
-...
-
-## Medium Priority Issues
-
-...
-
-## Low Priority Issues
-
-...
+| # | Finding | Urgency | Risk: Fix | Risk: No Fix | ROI | Blast Radius | Fix Effort |
+|---|---------|---------|-----------|-------------|-----|-------------|------------|
+| 1 | ... | 🔴 Critical | ... | ... | ... | ... | ... |
 
 ## Instruments Profiling Recommendations
 
-Based on findings, run these Instruments templates:
+[For each critical/high finding, suggest which Instruments template to use]
 
-1. **Leaks** - To verify retain cycles in [list files]
-2. **Time Profiler** - To measure actual impact of [issue]
-3. **Energy Log** - To quantify battery impact
+## Remediation Examples
 
-## Optimization Opportunities
-
-### Quick Wins (Low Effort, High Impact)
-1. [Optimization 1]
-2. [Optimization 2]
-
-### Medium Effort
-1. [Optimization 1]
-2. [Optimization 2]
-
-### Requires Refactoring
-1. [Optimization 1]
-2. [Optimization 2]
-
-## Before/After Examples
-
-### Example 1: [Title]
-
-**Before (X ms / Y MB):**
-```swift
-// Slow code
+[For each critical/high finding, show current code and optimized fix]
 ```
 
-**After (X ms / Y MB):**
-```swift
-// Optimized code
-```
-
-**Improvement:** X% faster / Y% less memory
-```
+Use the Issue Rating scale:
+- **Urgency:** 🔴 CRITICAL (crash/deadlock risk) · 🟡 HIGH (noticeable lag/drain) · 🟢 MEDIUM (suboptimal) · ⚪ LOW (minor)
+- **ROI:** 🟠 Excellent · 🟢 Good · 🟡 Marginal · 🔴 Poor
+- **Fix Effort:** Trivial / Small / Medium / Large
 
 ---
 
-## Step 5: Present Interactive Summary
-
-Show summary to user:
+## Step 6: Follow-up
 
 ```
-## Performance Analysis Complete
-
-**Overall Grade:** [A-F]
-
-| Severity | Count |
-|----------|-------|
-| CRITICAL | X |
-| HIGH | X |
-| MEDIUM | X |
-| LOW | X |
-
-**Top Issues:**
-1. [Highest impact issue]
-2. [Second highest]
-3. [Third highest]
-
-**Full report:** .agents/research/YYYY-MM-DD-performance-check.md
-
-What would you like to do?
-```
-
-Use AskUserQuestion:
-
-```
-questions:
+AskUserQuestion with questions:
 [
   {
     "question": "How would you like to proceed?",
     "header": "Next",
     "options": [
-      {"label": "Fix critical issues now", "description": "Walk through each critical issue with fixes"},
-      {"label": "See full report", "description": "Display the detailed markdown report"},
-      {"label": "Run Instruments", "description": "Get xctrace commands to profile specific issues"},
-      {"label": "Export for review", "description": "Report saved, I'll review later"}
+      {"label": "Fix critical issues now", "description": "Walk through each critical/high issue with fixes"},
+      {"label": "Re-scan specific category", "description": "Deeper scan on one area"},
+      {"label": "Report is sufficient", "description": "Report saved to .agents/research/"}
     ],
     "multiSelect": false
   }
 ]
 ```
 
----
-
-## For iOS-Specific Deep Dives
-
-This skill focuses on workflow orchestration. For deep iOS-specific performance analysis:
-
-- **Swift performance patterns:** Invoke `/axiom:axiom-swift-performance`
-- **SwiftUI performance:** Invoke `/axiom:axiom-swiftui-performance`
-- **Memory debugging:** Invoke `/axiom:axiom-memory-debugging`
-- **Energy optimization:** Invoke `/axiom:axiom-energy`
-- **Concurrency profiling:** Invoke `/axiom:axiom-concurrency-profiling`
+If "Fix critical issues now": Walk through each 🔴/🟡 finding, show the problematic code, propose an optimized fix, apply after user approval.
 
 ---
 
-## See Also
+## Instruments Reference
 
-- `/tech-talk-reportcard` - Comprehensive codebase analysis including performance
-- `/security-audit` - Security analysis (complements performance)
-- `/debug` - When performance issues cause specific bugs
+When suggesting profiling, use this mapping:
 
----
-
-## Common False Positives
-
-| Pattern | Why It's OK | How to Verify |
-|---------|-------------|---------------|
-| `Task { self.x }` with no stored ref | Task completes, no cycle | Check if Task is stored |
-| VStack in short list (<20 items) | Lazy not needed for small lists | Count items |
-| Timer that's definitely invalidated | Pattern exists but handled | Find matching invalidate |
-| DispatchQueue.main.sync from bg | Sometimes necessary | Check caller thread |
+| Issue Type | Instruments Template | What to Look For |
+|------------|---------------------|------------------|
+| Memory leaks | Leaks | Leaked objects over time |
+| Retain cycles | Allocations | Growth without release |
+| Main thread blocking | Time Profiler | Long calls on main thread |
+| Energy drain | Energy Log | High CPU/location/network |
+| SwiftUI renders | SwiftUI | View body invocation count |
+| Launch time | App Launch | Pre-main and post-main phases |
 
 ---
 
-## Appendix: Performance Budgets
+## Performance Budgets
 
 Recommended targets for iOS apps:
 
@@ -562,3 +423,15 @@ Recommended targets for iOS apps:
 | Memory (active) | < 150MB | Instruments Allocations |
 | Frame rate | 60 fps (120 on ProMotion) | Core Animation FPS |
 | Main thread hitches | < 1% of frames | Instruments Hitches |
+
+---
+
+## Troubleshooting
+
+| Problem | Solution |
+|---------|----------|
+| Too many grep hits for closures | Narrow glob to `**/*ViewModel*.swift` or `**/*Manager*.swift` |
+| Can't determine if Timer is invalidated | Search for `invalidate()` in the same file |
+| @Query seems fine but app is slow | Check if `.count` is the only access — should use fetchCount |
+| False positive rate too high | Read more context (30+ lines), check if code is in async scope |
+| GeometryReader flagged but seems OK | Check if it's a leaf view (fine) vs nested in a list (problematic) |
