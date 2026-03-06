@@ -18,6 +18,33 @@ metadata:
 
 ---
 
+## Pre-flight: Git Safety Check
+
+```bash
+git status --short
+```
+
+If uncommitted changes exist:
+
+```
+AskUserQuestion with questions:
+[
+  {
+    "question": "You have uncommitted changes. Commit before proceeding?",
+    "header": "Git",
+    "options": [
+      {"label": "Commit first (Recommended)", "description": "Save current work so you can revert if this skill modifies files"},
+      {"label": "Continue without committing", "description": "Proceed — I accept the risk"}
+    ],
+    "multiSelect": false
+  }
+]
+```
+
+If "Commit first": Ask for a commit message, stage changed files, and commit. Then proceed.
+
+---
+
 ## Step 1: Determine Release Details
 
 ```

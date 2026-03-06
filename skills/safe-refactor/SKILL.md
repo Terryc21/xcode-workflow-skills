@@ -18,6 +18,33 @@ metadata:
 
 ---
 
+## Pre-flight: Git Safety Check
+
+```bash
+git status --short
+```
+
+If uncommitted changes exist:
+
+```
+AskUserQuestion with questions:
+[
+  {
+    "question": "You have uncommitted changes. Commit before proceeding?",
+    "header": "Git",
+    "options": [
+      {"label": "Commit first (Recommended)", "description": "Save current work so you can revert if this skill modifies files"},
+      {"label": "Continue without committing", "description": "Proceed — I accept the risk"}
+    ],
+    "multiSelect": false
+  }
+]
+```
+
+If "Commit first": Ask for a commit message, stage changed files, and commit. Then proceed.
+
+---
+
 ## Step 1: Gather Refactoring Details
 
 ```
@@ -146,15 +173,7 @@ Grep pattern="ImmediateTypeName" glob="**/*.swift" output_mode="files_with_match
 
 Before refactoring, verify:
 
-```bash
-# Ensure clean git state
-git status --short
-
-# Check for uncommitted work
-git stash list
-```
-
-- [ ] Code is committed (clean git state)
+- [ ] Code is committed (handled by Pre-flight check)
 - [ ] All usages of the code being changed are understood (from Phase 2)
 - [ ] All existing tests pass (verify if needed)
 
