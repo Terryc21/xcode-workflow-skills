@@ -1,10 +1,10 @@
 ---
 name: plain-talk-reportcard
-description: Codebase analysis with A-F grades and plain-language summaries for non-technical stakeholders
-version: 2.0.0
+description: 'Codebase analysis with A-F grades explained in plain language for non-technical stakeholders. Self-contained iOS/Swift audit. Triggers: "plain talk report card", "stakeholder report", "non-technical audit".'
+version: 3.0.0
 author: Terry Nyberg
 license: MIT
-allowed-tools: [Task, Glob, Grep, Read, Write, AskUserQuestion]
+allowed-tools: [Glob, Grep, Read, Write, AskUserQuestion]
 metadata:
   tier: analysis
   category: analysis
@@ -14,15 +14,15 @@ metadata:
 
 **YOU MUST EXECUTE THIS WORKFLOW. Do not just describe it.**
 
-**Required output:** Every issue/finding MUST include Urgency, Risk, ROI, and Blast Radius ratings. For non-technical audiences, briefly explain what each rating means in parentheses.
+Generate a codebase report card with A-F grades explained in plain, non-technical language for project managers, executives, or non-developer stakeholders.
 
-Generate a comprehensive codebase report card with findings explained in plain, non-technical language suitable for project managers, executives, or non-developer stakeholders.
+All findings use the **Issue Rating Table** format. Include a brief plain-language explanation above the table so non-technical readers understand what the columns mean.
 
 ---
 
-## Step 1: Initial Questions
+## Step 1: Before Starting
 
-**IMPORTANT**: Before scanning, use `AskUserQuestion` to gather context:
+Ask the user about analysis options:
 
 ```
 AskUserQuestion with questions:
@@ -37,28 +37,10 @@ AskUserQuestion with questions:
     "multiSelect": false
   },
   {
-    "question": "How would you like to run this analysis?",
-    "header": "Mode",
-    "options": [
-      {"label": "Fast (parallel)", "description": "Multiple scans at once - faster, more prompts"},
-      {"label": "Quiet (sequential)", "description": "One thing at a time - slower, fewer prompts"}
-    ],
-    "multiSelect": false
-  },
-  {
-    "question": "Does this app have a backend/server component?",
-    "header": "Backend",
-    "options": [
-      {"label": "Yes", "description": "Include server/API analysis"},
-      {"label": "No", "description": "App is standalone, no server"}
-    ],
-    "multiSelect": false
-  },
-  {
     "question": "What is your timeline?",
     "header": "Timeline",
     "options": [
-      {"label": "Pre-release", "description": "Preparing for App Store - urgency matters"},
+      {"label": "Pre-release", "description": "Preparing for App Store — urgency matters"},
       {"label": "Post-release", "description": "App is live, ongoing improvement"},
       {"label": "Planning phase", "description": "Gathering info for roadmap"}
     ],
@@ -68,7 +50,7 @@ AskUserQuestion with questions:
     "question": "Any areas to emphasize?",
     "header": "Focus",
     "options": [
-      {"label": "Standard analysis", "description": "Cover all categories equally"},
+      {"label": "Standard analysis (Recommended)", "description": "Cover all categories equally"},
       {"label": "Emphasize user experience", "description": "Focus on what users see and feel"},
       {"label": "Emphasize reliability", "description": "Focus on crashes, errors, data safety"},
       {"label": "Emphasize accessibility", "description": "Focus on usability for all users"}
@@ -78,7 +60,9 @@ AskUserQuestion with questions:
 ]
 ```
 
-**If user selects "Yes" for CLAUDE.md:** Read CLAUDE.md and summarize in 2-3 non-technical bullets.
+**If "Yes" for CLAUDE.md:** Read CLAUDE.md and summarize in 2-3 non-technical bullets.
+
+**If "No":** Skip CLAUDE.md. Note in the report that it was intentionally excluded.
 
 ### Freshness
 
@@ -87,384 +71,381 @@ files in `.agents/`, `scratch/`, or prior audit reports. Ignore cached
 findings from auto-memory or previous sessions. Every finding must come
 from scanning the actual codebase as it exists now.
 
+**Exception:** Reading a previous report's **grades only** for trend comparison is allowed in Step 2.
+
 ---
 
-## Step 2: Check for Previous Reports
+## Step 2: Trend Check
 
-Check for existing reports to show progress over time:
+Check for a previous report to show improvement over time:
 
-```bash
+```
 Glob pattern=".agents/research/*-plain-reportcard.md"
 ```
 
-If previous reports exist, note the most recent one for trend comparison.
+If found, read ONLY the grade summary line from the most recent report. Do not read or reuse any findings.
 
 ---
 
-## Step 3: Automated Scans
+## Step 3: Understand the App
 
-Run these scans to gather data. The results will be translated into plain language in the report.
+Before scanning for issues, understand what this app does:
 
-### 3.1 Project Size & Health
+1. **What is it?** — Read the app entry point and 2-3 key views to understand the purpose
+2. **Who uses it?** — Consumer app, business tool, utility, game?
+3. **How big is it?** — File count, approximate lines of code
+4. **Key features** — List 3-5 main things users do in the app
+
+This context shapes how findings are explained in plain language.
+
+---
+
+## Step 4: Automated Scans
+
+Run all grep patterns below. Every finding MUST be verified by reading the flagged file before reporting — see Step 5.
+
+### 4.1 User Experience
 
 ```bash
-# Count Swift files
-Glob pattern="**/*.swift" | count
+# Loading states — does the app show feedback during waits?
+Grep pattern="ProgressView|\.loading|isLoading" glob="**/*.swift" output_mode="files_with_matches"
 
-# Count test files
-Glob pattern="**/*Test*.swift" | count
+# Error handling — does the app show friendly error messages?
+Grep pattern="(alert|errorMessage|showError)" glob="**/*.swift" output_mode="files_with_matches"
 
-# Check for documentation
-Glob pattern="**/README.md"
+# Empty states — what happens when there's no data?
+Grep pattern="(emptyState|EmptyView|ContentUnavailableView|noItems)" glob="**/*.swift" output_mode="files_with_matches"
+
+# View complexity — large views may indicate poor UX structure
+# Read flagged files and check if view body exceeds ~80 lines
+Grep pattern="var body.*some View" glob="**/*View*.swift" output_mode="files_with_matches"
 ```
 
-### 3.2 User Experience Indicators
+### 4.2 Reliability
 
 ```bash
-# Loading states (good UX)
-Grep pattern="ProgressView|\.loading|isLoading" glob="**/*.swift" output_mode="count"
+# Force casts — can cause crashes if data is unexpected
+# FALSE POSITIVE: as! after guard let or is check is already validated
+Grep pattern="as!" glob="**/*.swift"
 
-# Error handling (user-friendly errors)
-Grep pattern="(alert|errorMessage|showError)" glob="**/*.swift" output_mode="count"
+# Bare try? — silently ignores errors that users should know about
+# FALSE POSITIVE: try? where nil is the expected/designed fallback
+Grep pattern="try\?" glob="**/*.swift"
 
-# Empty states (when no data)
-Grep pattern="(emptyState|EmptyView|noItems)" glob="**/*.swift" output_mode="count"
+# Error handling coverage
+Grep pattern="catch\s*\{" glob="**/*.swift" output_mode="files_with_matches"
+
+# Data backup/sync support
+Grep pattern="(CloudKit|iCloud|backup|BackupManager)" glob="**/*.swift" output_mode="files_with_matches"
 ```
 
-### 3.3 Accessibility Indicators
+### 4.3 Accessibility
 
 ```bash
-# Accessibility labels (screen reader support)
+# Fixed font sizes — breaks system text size preferences
+Grep pattern="\.font\(\.system\(size:" glob="**/*.swift"
+
+# Accessibility label coverage
 Grep pattern="\.accessibilityLabel" glob="**/*.swift" output_mode="count"
 
-# Dynamic Type (adjustable text size)
-Grep pattern="\.font\(\.system\(size:" glob="**/*.swift" output_mode="count"
+# Images needing descriptions for screen readers
+# Read each — decorative images should use .accessibilityHidden(true)
+Grep pattern="Image\(\"" glob="**/*.swift"
+Grep pattern="Image\(systemName:" glob="**/*.swift"
 
-# High contrast support
-Grep pattern="colorScheme|\.accessibilityContrast" glob="**/*.swift" output_mode="count"
+# Testing support (accessibility identifiers)
+Grep pattern="\.accessibilityIdentifier" glob="**/*.swift" output_mode="count"
 ```
 
-### 3.4 Reliability Indicators
+### 4.4 Security
 
 ```bash
-# Crash-prone patterns (force unwraps)
-Grep pattern="!" glob="**/*.swift" output_mode="count"
+# Hardcoded secrets — passwords/keys visible in code
+Grep pattern="(api[_-]?key|apikey|secret[_-]?key|client[_-]?secret|password|token)\s*[:=]\s*[\"'][^\"']+[\"']" glob="**/*.swift" -i
 
-# Error handling
-Grep pattern="(catch|throws|Result<)" glob="**/*.swift" output_mode="count"
+# Sensitive data stored insecurely (should be in Keychain)
+Grep pattern="(UserDefaults|@AppStorage).*\b(password|token|secret|apiKey|credential)" glob="**/*.swift" -i
 
-# Data backup/sync
-Grep pattern="(CloudKit|iCloud|backup)" glob="**/*.swift" output_mode="count"
-```
+# Unencrypted connections
+# FALSE POSITIVE: http://localhost, XML namespaces
+Grep pattern="http://" glob="**/*.swift"
 
-### 3.5 Security Indicators
+# Secure storage usage (positive signal)
+Grep pattern="(Keychain|SecItem|kSecClass)" glob="**/*.swift" output_mode="files_with_matches"
 
-```bash
-# Secure storage
-Grep pattern="(Keychain|SecItem|kSecClass)" glob="**/*.swift" output_mode="count"
-
-# Encryption
-Grep pattern="(encrypt|AES|CryptoKit)" glob="**/*.swift" output_mode="count"
-
-# Privacy manifest
+# Privacy manifest (required for App Store)
 Glob pattern="**/PrivacyInfo.xcprivacy"
 ```
 
+### 4.5 Performance
+
+```bash
+# @Query without predicate (loads all data when only some is needed)
+# Read file to check if only .count is accessed (should use fetchCount)
+Grep pattern="@Query\s+(private\s+)?var" glob="**/*.swift"
+
+# Timer usage (potential battery drain)
+Grep pattern="Timer\.(scheduledTimer|publish)" glob="**/*.swift"
+
+# Continuous location tracking (high battery cost)
+Grep pattern="startUpdatingLocation" glob="**/*.swift"
+
+# Main thread file I/O (can freeze the app)
+# FALSE POSITIVE: FileManager in async/background context is fine
+Grep pattern="(FileManager|Data\(contentsOf|String\(contentsOf)" glob="**/*View*.swift"
+```
+
+### 4.6 Code Health
+
+```bash
+# Large files (>500 lines) — harder to maintain
+Glob pattern="**/*.swift"
+# After finding files, check line counts with: wc -l <file>
+
+# TODO/FIXME markers (known incomplete work)
+Grep pattern="(TODO|FIXME|HACK|XXX):" glob="**/*.swift"
+
+# Deprecated API usage
+Grep pattern="@available.*deprecated" glob="**/*.swift"
+
+# Legacy patterns that should be modernized
+# CLASSIFY: animation delay vs state update vs layout workaround
+Grep pattern="DispatchQueue\.main\.(async|sync)" glob="**/*.swift"
+```
+
+### 4.7 Testing
+
+```bash
+# Test file inventory
+Glob pattern="**/*Tests.swift"
+Glob pattern="**/*Test.swift"
+Glob pattern="**/*UITests*.swift"
+
+# Framework usage
+Grep pattern="import Testing" glob="**/*Test*.swift" output_mode="count"
+Grep pattern="import XCTest" glob="**/*Test*.swift" output_mode="count"
+
+# Compare test count to source file count for coverage estimate
+```
+
 ---
 
-## Step 4: Analysis Categories
+## Step 5: Verification Rule (CRITICAL)
 
-Translate technical findings into plain language for each category:
+Grep patterns produce CANDIDATES, not confirmed issues. Before reporting ANY finding to a non-technical stakeholder:
 
-### Category Descriptions (for stakeholders)
-
-| Category | What It Means | Why It Matters |
-|----------|---------------|----------------|
-| **User Experience** | How the app feels to use | Happy users, good reviews |
-| **Reliability** | Does the app crash or lose data? | Trust and retention |
-| **Accessibility** | Can everyone use it? | Wider audience, legal compliance |
-| **Security** | Is user data protected? | Trust, privacy laws |
-| **Performance** | Is the app fast and efficient? | User satisfaction, battery life |
-| **Code Health** | Is the code maintainable? | Future feature speed, bug fixes |
-| **Testing** | Is the app well-tested? | Fewer bugs, confident releases |
+1. **Read the flagged file** — at minimum 20 lines of context
+2. **Classify** — CONFIRMED, FALSE_POSITIVE, or INTENTIONAL
+3. **Never report grep counts as issue counts** — e.g., "150 crash-prone patterns" from matching `!` is misleading; most `!` characters are negations, not force unwraps
+4. **Only report confirmed issues** — false positives are especially damaging for non-technical audiences who can't evaluate accuracy
 
 ---
 
-## Step 5: Output Format
+## Step 6: Grading
 
-### CLAUDE.md Summary (if included)
+### Grade Scale (with plain-language meaning)
 
-*Project context:*
-- [Non-technical summary point 1]
-- [Non-technical summary point 2]
+| Grade | Technical | Plain Language |
+|-------|-----------|----------------|
+| A | Excellent — best practices, minimal issues | Like a car that passed inspection with no issues |
+| B | Good — solid, minor improvements needed | Runs well, a few minor things to tune up |
+| C | Adequate — functional but gaps exist | Gets you there, but needs some attention |
+| D | Poor — significant issues | Needs real work before it's dependable |
+| F | Failing — critical problems | Not safe for daily use yet |
 
-*If excluded:*
-> **Note:** Project-specific context was excluded per request.
+Use +/- modifiers. Convert to points: A=4, B=3, C=2, D=1, F=0 (±0.3 for +/-).
 
-### Project Overview
+### Categories
+
+| Category | Weight | What It Means | Why It Matters |
+|----------|--------|---------------|----------------|
+| User Experience | 15% | How the app feels to use | Happy users, good reviews |
+| Reliability | 15% | Does the app crash or lose data? | Trust and retention |
+| Accessibility | 10% | Can everyone use it? | Wider audience, legal compliance |
+| Security | 15% | Is user data protected? | Trust, privacy laws |
+| Performance | 15% | Is the app fast and battery-friendly? | User satisfaction |
+| Code Health | 10% | Is the code easy to maintain? | Future features ship faster |
+| Testing | 15% | Is the app well-tested? | Fewer bugs reach users |
+
+> **Note to reader:** "Weight" means how much this category affects the overall grade. Security (15%) matters more than Code Health (10%).
+
+### Overall Grade Calculation
 
 ```
-**App Size:** Medium (~28,000 lines of code across 142 files)
-**Test Coverage:** Partial (47 unit tests, 12 automated UI tests)
-**Last Updated:** [date from git]
+Overall = (Experience × 0.15) + (Reliability × 0.15) + (Accessibility × 0.10)
+        + (Security × 0.15) + (Performance × 0.15) + (Health × 0.10) + (Testing × 0.15)
 ```
 
-### Grade Summary Line
+### Timeline Adjustment
+
+- **Pre-release:** Double-weight Security and Reliability findings
+- **Post-release:** Standard weights
+- **Planning:** Double-weight Code Health and Testing findings
+
+---
+
+## Step 7: Output Format
+
+Write to `.agents/research/YYYY-MM-DD-plain-reportcard.md`.
+
+### 1. Executive Summary (FIRST — 2-3 sentences)
+
+The very first thing in the report. A non-technical reader should understand the app's health in 10 seconds.
+
+Example:
+> This app is in good shape for release with strong security and reliability. The main gaps are accessibility (making it usable for everyone) and test coverage (automated checks that catch bugs before users see them). These improvements would strengthen the app significantly.
+
+### 2. Key Questions Answered
+
+Answer these directly — stakeholders will ask them:
 
 ```
-**Overall: B+** (Experience B+ | Reliability A- | Accessibility C+ | Security A | Performance B | Health B+ | Testing C+)
+**Is this app ready to ship?** [Yes / Yes with caveats / Not yet]
+**What's the biggest risk?** [One sentence]
+**What should we prioritize?** [Top 1-2 items]
 ```
 
-### Trend Comparison (if previous report exists)
+### 3. CLAUDE.md Summary (if included)
+
+2-3 non-technical bullet points. If excluded: "Project context was excluded per request."
+
+### 4. Project Overview
 
 ```
-**Progress Since Last Report (Jan 15):**
-- User Experience: B → B+ (improved)
-- Accessibility: C → C+ (improved)
-- Testing: C → C+ (improved)
-- Security: A → A (maintained)
+App Size: Medium (~28,000 lines of code across 142 files)
+Test Coverage: Partial (47 automated tests, 12 UI tests)
 ```
 
-### Executive Summary
+### 5. Grade Summary Line
 
-Write 2-3 sentences summarizing the app's health:
+```
+Overall: B+ (Experience B+ | Reliability A- | Accessibility C+ | Security A | Performance B | Health B+ | Testing C+)
+```
 
-> The app is in good shape for release with strong security and reliability. The main areas for improvement are accessibility (making the app usable for everyone) and test coverage (automated checks that catch bugs before users see them). These improvements would take approximately 2-3 weeks of focused effort.
+### 6. Trend Comparison (if previous report exists)
 
-### Grades with Plain-Language Details
+```
+Progress Since Last Report (YYYY-MM-DD):
+  User Experience: B → B+ (improved) | Accessibility: C → C+ (improved) | Security: A → A (maintained)
+```
 
-```markdown
+### 7. Per-Category Grades
+
+For each category:
+- **Grade** and plain-language one-liner ("What this means")
+- **What's working well** — strengths in plain language
+- **What needs attention** — confirmed findings only, explained simply
+
+Example:
+```
 ### User Experience: B+
 **What this means:** The app is pleasant to use with room for minor polish.
 
 **What's working well:**
-- Clean, intuitive design that users can navigate easily
 - App responds quickly to taps and gestures
-- Good use of animations that feel natural
-
-**What could be better:**
-- **[HIGH]** Some screens don't show loading indicators — users may think the app froze
-- **[MED]** Error messages use technical language instead of helpful guidance
-- **[LOW]** A few buttons are slightly too small on smaller phones
-
----
-
-### Reliability: A-
-**What this means:** The app is stable and protects user data well.
-
-**What's working well:**
-- Data is saved automatically and synced to the cloud
-- App recovers gracefully from network problems
-- No crash-prone code patterns detected
-
-**What could be better:**
-- **[MED]** Some error scenarios show blank screens instead of helpful messages
-
----
-
-### Accessibility: C+
-**What this means:** Basic accessibility is present, but gaps exist that could exclude some users.
-
-**Why this matters:**
-- 1 in 4 adults have a disability that may affect app use
-- Apple may reject apps with poor accessibility
-- Legal requirements (ADA, WCAG) may apply
-
-**What's working well:**
-- Text can be resized using system settings
-- Most buttons can be activated with VoiceOver
+- Clean layout that's easy to navigate
 
 **What needs attention:**
-- **[HIGH]** 23 buttons are missing descriptions for screen reader users
-- **[HIGH]** 8 images have no text alternatives
-- **[MED]** Some text doesn't adjust when users increase text size
-
----
-
-### Security: A
-**What this means:** User data is well-protected.
-
-**What's working well:**
-- Passwords and tokens stored in secure vault (Keychain)
-- All network connections are encrypted
-- No sensitive data accidentally logged
-- Privacy manifest present for App Store compliance
-
----
-
-### Testing: C+
-**What this means:** Some automated testing exists, but gaps could let bugs slip through.
-
-**What's working well:**
-- 47 automated tests for core logic
-- 12 automated tests for user interface flows
-
-**What needs attention:**
-- **[MED]** No tests for cloud sync — bugs here could cause data loss
-- **[MED]** Some UI tests are unreliable (pass sometimes, fail sometimes)
+- Some screens don't show a loading indicator — users may think the app froze
+- Error messages use technical jargon instead of helpful guidance
 ```
 
-### Issues by Priority
+Do NOT use `[HIGH]`/`[MED]`/`[LOW]` tags in the per-category sections. Keep them plain language. The Issue Rating Table (below) handles prioritization.
 
-Use plain language and explain impact:
+### 8. Issue Rating Table
 
-```markdown
-### Issues Summary
+Include a plain-language introduction before the table:
 
-| Priority | Count | What This Means |
-|----------|-------|-----------------|
-| **Immediate** | 3 | Should fix before release |
-| **Soon** | 5 | Fix within 2-4 weeks |
-| **Eventually** | 8 | Nice to have, lower priority |
+> **Reading this table:** Each row is something that needs attention. "Urgency" shows how soon to fix it. "Risk: No Fix" shows what happens if we don't. "ROI" shows whether the fix is worth the effort (🟠 = excellent value). "Fix Effort" shows roughly how big the job is.
 
----
+Then render the full Issue Rating Table sorted by urgency descending, then ROI:
 
-### Immediate (Fix Before Release)
-
-**1. Add loading indicators**
-- **Impact:** Users think the app froze when loading data
-- **Effort:** ~2 days
-- **Risk if ignored:** Bad reviews, user frustration
-
-**2. Add screen reader labels to buttons**
-- **Impact:** Blind users cannot use 23 buttons
-- **Effort:** ~1 day
-- **Risk if ignored:** App Store rejection, accessibility complaints
-
-**3. Fix image descriptions**
-- **Impact:** Screen readers say "image" instead of what the image shows
-- **Effort:** ~4 hours
-- **Risk if ignored:** Poor experience for visually impaired users
-
----
-
-### Soon (Next 2-4 Weeks)
-
-**4. Improve error messages**
-- **Impact:** Users see "Error code 500" instead of "Please try again"
-- **Effort:** ~3 days
-
-**5. Add cloud sync tests**
-- **Impact:** Sync bugs might not be caught before release
-- **Effort:** ~1 week
-
----
-
-### Eventually (Backlog)
-
-**6. Increase text size support**
-- **Impact:** Users with vision impairments may struggle to read
-
-**7. Refactor large code files**
-- **Impact:** Future features take longer to build
+```
+| # | Finding | Urgency | Risk: Fix | Risk: No Fix | ROI | Blast Radius | Fix Effort |
+|---|---------|---------|-----------|-------------|-----|-------------|------------|
+| 1 | ... | 🔴 Critical | ... | ... | ... | ... | ... |
 ```
 
-### Recommended Timeline
+Use the standard scale:
+- **Urgency:** 🔴 CRITICAL · 🟡 HIGH · 🟢 MEDIUM · ⚪ LOW
+- **ROI:** 🟠 Excellent · 🟢 Good · 🟡 Marginal · 🔴 Poor
+- **Fix Effort:** Trivial / Small / Medium / Large
 
-```markdown
-### Recommended Action Plan
+### 9. Recommended Next Steps
 
-**Week 1: Critical Fixes**
-- Add loading indicators (2 days)
-- Add accessibility labels (1 day)
-- Fix image descriptions (4 hours)
+Group by timeline. Do NOT fabricate specific time estimates — use relative sizing (small/medium/large effort) unless you can estimate from actual code scope.
 
-**Week 2-3: Quality Improvements**
-- Improve error messages (3 days)
-- Add cloud sync tests (1 week)
+```
+Immediate (Before Release):
+- [Finding #1] — plain-language rationale
 
-**Month 2: Polish**
-- Increase text size support
-- Code organization improvements
+Soon (Next Few Weeks):
+- [Finding #3] — plain-language rationale
+
+Eventually (Backlog):
+- [Finding #5] — plain-language rationale
 ```
 
 ---
 
-## Step 6: Deep Dive Option
+## Step 8: Follow-up
 
-After presenting the report, offer focused deep dives:
-
-> **Note:** Some deep dives require [Axiom](https://github.com/CharlesWiltgen/Axiom) to be installed. Security details use the built-in `/security-audit` skill.
+After presenting the report:
 
 ```
 AskUserQuestion with questions:
 [
   {
-    "question": "Would you like more detail on any area?",
-    "header": "Deep Dive",
+    "question": "What would you like to do next?",
+    "header": "Next",
     "options": [
-      {"label": "Accessibility details", "description": "Requires Axiom - full accessibility gap analysis"},
-      {"label": "User experience details", "description": "Requires Axiom - screen-by-screen UX analysis"},
-      {"label": "Security details", "description": "Uses built-in /security-audit - no extra install needed"},
-      {"label": "No, this is enough", "description": "The overview is sufficient"}
-    ],
-    "multiSelect": true
-  }
-]
-```
-
-If user selects deep dives:
-- **Accessibility:** Invoke `axiom-ios-accessibility` (requires Axiom)
-- **User experience:** Invoke `axiom-ios-ui`, `axiom-hig` (requires Axiom)
-- **Security:** Invoke `/security-audit` (built-in, always available)
-
-If Axiom is not installed and user selects an Axiom-dependent option:
-> Axiom is not installed. Install it with: `claude plugin install CharlesWiltgen/Axiom`
-
----
-
-## Step 7: Follow-up Question
-
-After deep dives (or if skipped), ask about next steps:
-
-```
-AskUserQuestion with questions:
-[
-  {
-    "question": "Would you like me to create an action plan?",
-    "header": "Next Steps",
-    "options": [
-      {"label": "Yes, plan immediate items", "description": "Detailed plan for high-priority fixes"},
-      {"label": "Yes, plan everything", "description": "Comprehensive roadmap with timeline"},
-      {"label": "No, report is enough", "description": "End here"}
+      {"label": "Fix critical issues now", "description": "Walk through each critical/high issue with fixes"},
+      {"label": "Create an action plan", "description": "Generate a prioritized implementation plan"},
+      {"label": "Report is sufficient", "description": "End here — report saved to .agents/research/"}
     ],
     "multiSelect": false
   }
 ]
 ```
 
-If user selects yes, invoke `/implementation-plan` with the selected items.
+If "Fix critical issues now": Walk through each 🔴/🟡 finding, show the problematic code, propose a fix, apply after user approval.
 
----
-
-## Output
-
-Write the report card to `.agents/research/YYYY-MM-DD-plain-reportcard.md` for future reference.
+If "Create an action plan": Group findings into phases and present as a structured plan.
 
 ---
 
 ## Plain Language Glossary
 
-When these terms appear, translate them:
+When these terms appear in code or scan results, translate them for the reader:
 
 | Technical Term | Plain Language |
 |----------------|----------------|
 | Accessibility | Making the app usable by everyone, including people with disabilities |
-| API | The way the app talks to servers |
-| Crash | The app unexpectedly closes |
-| Force unwrap | Code that can cause crashes if data is missing |
-| Keychain | Apple's secure storage vault for passwords |
-| Retain cycle | A bug that slowly uses up memory |
+| API | The way the app talks to servers or other apps |
+| Async/await | A way of doing things in the background without freezing the app |
+| CI/CD | Automated systems that test and release the app |
+| Concurrency | The app doing multiple things at once without getting confused |
+| Crash | The app unexpectedly closes — user loses their place |
+| Dynamic Type | Users can change text size in their phone settings |
+| Force unwrap | Code that assumes data exists — crashes if it doesn't |
+| Keychain | Apple's secure vault for storing passwords and secrets |
+| Migration | Updating how data is stored when the app gets a new version |
+| Privacy Manifest | A file Apple requires that declares what user data the app accesses |
+| Retain cycle | A memory bug that slowly makes the app use more and more memory |
 | SwiftData | Apple's system for saving data on the device |
-| UI test | Automated robot that clicks through the app |
-| Unit test | Automated check for a small piece of logic |
-| VoiceOver | Apple's screen reader for blind users |
-| WCAG | International guidelines for accessibility |
+| SwiftUI | Apple's modern toolkit for building app screens |
+| UI test | An automated robot that taps through the app like a real user |
+| Unit test | An automated check that verifies a small piece of the app works correctly |
+| VoiceOver | Apple's built-in screen reader that speaks what's on screen for blind users |
+| WCAG | International standards for making apps accessible to everyone |
 
 ---
 
-## See Also
+## Troubleshooting
 
-- `/tech-talk-reportcard` - Technical version for developers
-- `/implementation-plan` - Create action plans from report findings
-- `/release-prep` - Pre-release checklist
+| Problem | Solution |
+|---------|----------|
+| Can't determine app purpose | Read the app entry point, main navigation, and 2-3 views |
+| Too many grep hits to verify | Narrow the glob pattern to specific directories |
+| Category has no findings | Grade A — note "No issues detected" and list what was scanned |
+| Stakeholder wants technical detail | Point them to `/tech-talk-reportcard` for the developer version |
