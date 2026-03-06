@@ -1,10 +1,10 @@
 ---
 name: review-changes
 description: 'Pre-commit review of staged/unstaged changes for bugs, security, performance, and missing tests. Scoped to changed files only. Triggers: "review changes", "review my code", "check before commit", "pre-commit review".'
-version: 2.0.0
+version: 2.1.0
 author: Terry Nyberg
 license: MIT
-allowed-tools: [Bash, Glob, Grep, Read, Write, AskUserQuestion]
+allowed-tools: [Bash, Glob, Grep, Read, Write, LSP, AskUserQuestion]
 metadata:
   tier: execution
   category: analysis
@@ -98,10 +98,10 @@ Also check manually:
 
 ```bash
 # Hardcoded secrets in changed files
-Grep pattern="(api[_-]?key|apikey|secret[_-]?key|client[_-]?secret)\\s*[:=]\\s*[\\\"'][^\\\"']+[\\\"']" path="<changed_file>" -i
+Grep pattern="(api[_-]?key|apikey|secret[_-]?key|client[_-]?secret)\s*[:=]\s*[\"'][^\"']+[\"']" path="<changed_file>" -i
 
 # Sensitive data being logged
-Grep pattern="(print|NSLog|os_log|Logger).*\\b(password|token|secret|credential)" path="<changed_file>" -i
+Grep pattern="(print|NSLog|os_log|Logger).*\b(password|token|secret|credential)" path="<changed_file>" -i
 
 # HTTP URLs (non-HTTPS)
 # FALSE POSITIVE: http://localhost, XML namespace URIs
@@ -128,7 +128,8 @@ Look in the diff for:
 
 Look in the diff for:
 - `@ObservedObject` where `@StateObject` is needed (object recreated on view rebuild)
-- `@State` with reference types (should use `@State` with `@Observable`)
+- `@StateObject` or `@ObservedObject` with `@Observable` classes (should use `@State` instead — iOS 17+)
+- `@State` with non-`@Observable` reference types (won't trigger updates)
 - Bare `Task {}` in view body instead of `.task {}` modifier
 - Missing loading/error states for async operations
 
@@ -158,9 +159,10 @@ If duplicate logic exists, flag it and suggest extracting to a shared function.
 Before reporting ANY finding:
 
 1. **Confirm it's in changed/added code** — don't flag pre-existing issues
-2. **Read context** — at minimum 10 lines around the match
+2. **Read context** — at minimum 20 lines around the match
 3. **Check for intentional patterns** — `try?` may be designed fallback, `as!` may follow validation
-4. **Classify** — CONFIRMED, FALSE_POSITIVE, or PRE_EXISTING
+4. **Use LSP when available** — `findReferences` to check if a new function is called, `goToDefinition` to verify types
+5. **Classify** — CONFIRMED, FALSE_POSITIVE, or PRE_EXISTING
 
 ---
 
@@ -193,7 +195,7 @@ If important new logic lacks tests, note it in the report.
 
 ## Step 5: Generate Review Report
 
-Present findings inline (not written to a file — this is a quick review, not an audit):
+**Display the full review summary, issue table, and verdict inline:**
 
 ```markdown
 ## Code Review Summary
@@ -264,5 +266,5 @@ If "Fix issues now": Walk through each finding, show the problematic code, propo
 | No staged changes | Fall back to `git diff` for unstaged, or `git diff HEAD~1` for last commit |
 | Too many changed files | Focus on `.swift` files first; skip assets, configs unless security-relevant |
 | Pre-existing issues tempting to fix | Note them separately as "out of scope" — don't mix with review findings |
-| Can't determine if pattern is intentional | Read 20+ lines of context; check if there's a comment explaining the choice |
+| Can't determine if pattern is intentional | Read 30+ lines of context; check if there's a comment explaining the choice |
 | Changed file is a test file | Review test quality: assertions present, edge cases covered, no `sleep()` |

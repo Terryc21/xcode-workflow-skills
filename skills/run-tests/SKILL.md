@@ -1,10 +1,10 @@
 ---
 name: run-tests
 description: 'Run tests with smart execution strategies - parallel, sequential, or split (UI sequential + unit parallel). Triggers: "run tests", "run my tests", "execute tests".'
-version: 2.0.0
+version: 2.1.0
 author: Terry Nyberg
 license: MIT
-allowed-tools: [Bash, Glob, Grep, Read, AskUserQuestion]
+allowed-tools: [Bash, Glob, Grep, Read, Write, AskUserQuestion]
 metadata:
   tier: execution
   category: testing
@@ -21,18 +21,34 @@ metadata:
 ## Step 1: Detect Test Configuration
 
 ```bash
-# Find available schemes
-xcodebuild -list -json 2>/dev/null | head -30
+# Find available schemes and test targets
+xcodebuild -list -json 2>/dev/null | head -50
 
-# Find test targets
+# Find test files to identify target names
 Glob pattern="**/*Tests.swift"
 Glob pattern="**/*UITests*.swift"
 ```
 
-Identify:
-- **Scheme name** — from `xcodebuild -list`
-- **UI test target** — typically `<AppName>UITests`
-- **Unit test target** — typically `<AppName>Tests`
+Extract from the JSON output:
+- **Scheme name** — from `schemes` array
+- **Test targets** — from `targets` array (names ending in `Tests` or `UITests`)
+
+If multiple schemes exist, confirm with the user:
+
+```
+AskUserQuestion with questions:
+[
+  {
+    "question": "Which scheme should I test?",
+    "header": "Scheme",
+    "options": [
+      {"label": "<detected_scheme_1>", "description": "Main app scheme"},
+      {"label": "<detected_scheme_2>", "description": "Other scheme"}
+    ],
+    "multiSelect": false
+  }
+]
+```
 
 ---
 
@@ -112,15 +128,17 @@ xcodebuild test \
 
 ---
 
-## Step 4: Report Results
+## Step 4: Display Results
 
-Parse the output and present:
+Parse the xcodebuild output and **display the results inline**:
 
 ```markdown
 ## Test Results
 
 **Strategy:** Smart Split
+**Scheme:** <SCHEME>
 **Duration:** X minutes
+**Status:** All Passing ✓ / X Failures ✗
 
 | Target | Tests | Passed | Failed |
 |--------|-------|--------|--------|
@@ -129,14 +147,52 @@ Parse the output and present:
 | **Total** | **N** | **N** | **0** |
 ```
 
-If failures occurred, list each:
+If failures occurred, list each with file references:
 
 ```markdown
 ## Failures
 
-| Test | Error | File |
-|------|-------|------|
-| testName | Expected X but got Y | File.swift:45 |
+| # | Test | Error | File |
+|---|------|-------|------|
+| 1 | testName | Expected X but got Y | File.swift:45 |
+```
+
+### Read Failing Test Files
+
+For each failure, read the test file to understand context:
+
+```bash
+Read file_path="path/to/FailingTest.swift"
+```
+
+---
+
+## Step 5: Write Report (If Failures)
+
+If any tests failed, write a report for tracking:
+
+```bash
+Write file_path=".agents/research/YYYY-MM-DD-test-results.md" content="[report]"
+```
+
+---
+
+## Step 6: Follow-up
+
+```
+AskUserQuestion with questions:
+[
+  {
+    "question": "How would you like to proceed?",
+    "header": "Next",
+    "options": [
+      {"label": "Debug failures", "description": "Investigate and fix failing tests"},
+      {"label": "Re-run failed tests", "description": "Run only the failing tests again"},
+      {"label": "Results are sufficient", "description": "I'll handle it from here"}
+    ],
+    "multiSelect": false
+  }
+]
 ```
 
 ---
@@ -168,3 +224,4 @@ rm -rf ~/Library/Developer/Xcode/DerivedData/<PROJECT>-*
 | "No such module" error | Clean DerivedData and rebuild |
 | UI tests time out | Increase `waitForExistence` timeout or use sequential mode |
 | Can't find scheme | Run `xcodebuild -list` to see available schemes |
+| Multiple test targets unclear | Check target names in `xcodebuild -list -json` output |

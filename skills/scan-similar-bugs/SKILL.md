@@ -1,10 +1,10 @@
 ---
 name: scan-similar-bugs
 description: 'After fixing a bug, systematically find other instances of the same pattern. Triggers: "scan for similar bugs", "find other instances", "check for similar issues", "scan similar bugs".'
-version: 2.0.0
+version: 2.1.0
 author: Terry Nyberg
 license: MIT
-allowed-tools: [Grep, Glob, Read, Write, AskUserQuestion]
+allowed-tools: [Grep, Glob, Read, Write, Edit, Bash, AskUserQuestion]
 metadata:
   tier: execution
   category: debugging
@@ -108,12 +108,21 @@ Grep pattern="\.sink\s*\{[^}]*self\." glob="**/*ViewModel*.swift"
 Grep pattern="\.sink\s*\{[^}]*self\." glob="**/*Manager*.swift"
 ```
 
-### 3.2: Analyze Each Instance
+### 3.2: Check Git History (Optional)
 
-For each match found:
-1. **Read the surrounding context** — at minimum 20 lines around the match
+```bash
+# Find when the anti-pattern was introduced
+git log -p -S "<anti_pattern_code>" --all -- "*.swift" | head -30
+```
+
+### 3.3: Verification Rule
+
+Before classifying ANY match:
+
+1. **Read the flagged file** — at minimum 20 lines around the match
 2. **Check for intentional usage** — comments, validation guards, design patterns
-3. **Classify** as:
+3. **Check structural context** — a pattern inside a guard/if-let chain may be safe
+4. **Classify** as:
    - **BUG:** Matches anti-pattern, needs fix
    - **OK:** Correct usage, no action needed
    - **REVIEW:** Unclear, needs human review
@@ -122,7 +131,7 @@ For each match found:
 
 ## Step 4: Generate Report
 
-Write report to `.agents/research/YYYY-MM-DD-similar-bugs-<name>.md`:
+**Display the summary table and all findings inline**, then write to `.agents/research/YYYY-MM-DD-similar-bugs-<name>.md`:
 
 ```markdown
 # Similar Bug Scan: [Bug Pattern Name]

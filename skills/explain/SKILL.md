@@ -1,10 +1,10 @@
 ---
 name: explain
 description: 'Deep-dive explanation of how a specific file, feature, or data flow works. Triggers: "explain", "how does X work", "walk me through", "what does this do".'
-version: 2.0.0
+version: 2.1.0
 author: Terry Nyberg
 license: MIT
-allowed-tools: [Read, Grep, Glob, LSP, Write]
+allowed-tools: [Read, Grep, Glob, LSP, Bash, Write, AskUserQuestion]
 metadata:
   tier: reference
   category: analysis
@@ -157,9 +157,23 @@ Look for:
 
 ---
 
-## Step 8: Write Report
+## Step 8: Check Git History
 
-Write the explanation to `.agents/research/YYYY-MM-DD-explain-{topic}.md` for future reference.
+```bash
+# When was this code written/last changed?
+git log --oneline -5 -- "path/to/file.swift"
+
+# Who authored the key implementation?
+git log --format="%h %ai %s" -3 -- "path/to/file.swift"
+```
+
+---
+
+## Step 9: Display Results and Write Report
+
+**Display the full explanation inline** (overview, components, flow, data flow, dependencies, edge cases) so the user sees results immediately.
+
+Then write to `.agents/research/YYYY-MM-DD-explain-{topic}.md` for future reference.
 
 Include a "Quick Reference" section at the end:
 
@@ -171,6 +185,26 @@ Include a "Quick Reference" section at the end:
 **To debug issues:** Check [key file:line] where [critical logic happens]
 
 **To add tests:** Mock [protocol] and test [key methods]
+```
+
+---
+
+## Step 10: Follow-up
+
+```
+AskUserQuestion with questions:
+[
+  {
+    "question": "Would you like to explore further?",
+    "header": "Next",
+    "options": [
+      {"label": "Trace a specific path", "description": "Follow a particular code path in more detail"},
+      {"label": "Generate tests", "description": "Create tests for this feature based on the explanation"},
+      {"label": "Explanation is sufficient", "description": "No further questions"}
+    ],
+    "multiSelect": false
+  }
+]
 ```
 
 ---

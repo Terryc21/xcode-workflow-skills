@@ -1,7 +1,7 @@
 ---
 name: enhanced-commands
 description: Enhanced list of custom Claude commands for iOS and macOS Swift projects with examples and output locations.
-version: 2.1.0
+version: 2.2.0
 author: Terry Nyberg
 license: MIT
 allowed-tools: [Read]
@@ -45,15 +45,15 @@ Commands are grouped by category. Each includes examples and output locations.
   - Plain language glossary translates technical terms
   - Effort estimates and risk explanations for each issue
 
-**`/security-audit` Details** (v2.0.0)
+**`/security-audit` Details** (v2.1.0)
 - Output: `.agents/research/YYYY-MM-DD-security-audit.md`
 - Features: Automated grep patterns, severity scoring (CRITICAL/HIGH/MEDIUM/LOW), remediation code examples, Privacy Manifest validation.
 
-**`/performance-check` Details** (v2.0.0)
+**`/performance-check` Details** (v2.1.0)
 - Output: `.agents/research/YYYY-MM-DD-performance-check.md`
 - Features: Automated anti-pattern detection, before/after code examples, profiling recommendations.
 
-**`/dead-code-scanner` Details** (v2.0.0)
+**`/dead-code-scanner` Details** (v2.1.0)
 - Output: `.agents/research/YYYY-MM-DD-dead-code-*.md`
 - Features: Quick (post-refactor) or full (hygiene) scan modes, Swift-specific exclusions, confidence classification.
 
@@ -69,7 +69,7 @@ Commands are grouped by category. Each includes examples and output locations.
 | `/implementation-plan` | *(Deprecated — use `/plan`)* Structured implementation planning. |
 | `/safe-refactor` | Refactor plan with blast radius, deps, rollback. |
 
-**`/plan` Details** (v1.1.0)
+**`/plan` Details** (v1.2.0)
 - Output: `.agents/research/YYYY-MM-DD-implementation-plan.md`
 - Features: Auto-detects audit reports for audit-aware mode, T-shirt sizing, Golden Rule (WHAT not HOW), phased task lists with Urgency/Risk/ROI/Blast ratings, rollback strategy.
 
@@ -83,14 +83,14 @@ Commands are grouped by category. Each includes examples and output locations.
 | `/ui-scan` | Accessibility identifier scan and UI test environment setup. |
 | `/scan-similar-bugs` | After fixing a bug, find the same pattern across the codebase. |
 
-**`/debug` Details** (v2.0.0)
+**`/debug` Details** (v2.1.0)
 - Output: `.agents/research/YYYY-MM-DD-debug-*.md`
 - Features: Concrete evidence-gathering (git log, grep patterns), common iOS bug pattern checklist, hypothesis table, root cause report, similar bug scan integration.
 
-**`/generate-tests` Details** (v2.0.0)
+**`/generate-tests` Details** (v2.1.0)
 - Features: Auto-detects test framework (Swift Testing or XCTest), generates mocks, covers edge cases, parameterized test support.
 
-**`/run-tests` Details** (v2.0.0)
+**`/run-tests` Details** (v2.1.0)
 - Features: Smart split strategy (UI sequential + unit parallel), all sequential, all parallel, or unit-only modes.
 
 ## Release & Deployment
@@ -102,11 +102,11 @@ Commands are grouped by category. Each includes examples and output locations.
 | `/update-website` | Sync website content with app codebase. |
 | `/explain` | Deep-dive on file/feature/data flow. |
 
-**`/release-prep` Details** (v2.0.0)
+**`/release-prep` Details** (v2.1.0)
 - Output: `.agents/research/YYYY-MM-DD-release-prep-vX.Y.Z.md`
 - Features: Automated version bump, changelog generation, privacy manifest validation, deployment target check, ATS check, entitlements check, app icon validation, localization completeness.
 
-**`/release-screenshots` Details** (v2.0.0)
+**`/release-screenshots` Details** (v2.1.0)
 - Features: Multi-device capture (6.9", 6.5", 5.5"), status bar override, organized folder output, device frame support.
 
 ## Interactive Features

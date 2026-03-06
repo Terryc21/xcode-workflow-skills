@@ -1,10 +1,10 @@
 ---
 name: security-audit
 description: 'Automated security vulnerability scan for iOS/macOS apps. Covers secrets, storage, network, input validation, privacy manifest, and file protection. Triggers: "security audit", "check for secrets", "security scan".'
-version: 2.0.0
+version: 2.1.0
 author: Terry Nyberg
 license: MIT
-allowed-tools: [Grep, Glob, Read, Write, AskUserQuestion]
+allowed-tools: [Grep, Glob, Read, Write, Bash, AskUserQuestion]
 metadata:
   tier: execution
   category: analysis
@@ -275,15 +275,15 @@ Grade each scanned category independently:
 
 ### Overall Grade
 
-Lowest individual category grade pulls down the overall by one notch. Security is only as strong as its weakest link.
+The weakest category dominates. Formula: start with the average of all categories, then cap at one grade above the lowest category. Security is only as strong as its weakest link.
 
-Example: If 5 categories are A but Secrets is D → Overall is C (weakest category dominates).
+Example: If 5 categories are A but Secrets is D → Overall is C (capped at one grade above D, regardless of the A categories).
 
 ---
 
 ## Step 5: Output
 
-Write report to `.agents/research/YYYY-MM-DD-security-audit.md`.
+**Display the executive summary, grade summary, issue table, and privacy status inline**, then write report to `.agents/research/YYYY-MM-DD-security-audit.md`.
 
 ### Report Structure
 

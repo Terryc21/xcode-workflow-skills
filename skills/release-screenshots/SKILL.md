@@ -1,10 +1,10 @@
 ---
 name: release-screenshots
 description: 'Capture App Store screenshots across all required device sizes using simulator automation. Triggers: "release screenshots", "app store screenshots", "capture screenshots".'
-version: 2.0.0
+version: 2.1.0
 author: Terry Nyberg
 license: MIT
-allowed-tools: [Bash, Read, Glob, AskUserQuestion]
+allowed-tools: [Bash, Read, Glob, Write, AskUserQuestion]
 metadata:
   tier: execution
   category: release
@@ -106,6 +106,9 @@ xcrun simctl ui "iPhone 16 Pro Max" appearance light
 ### Build and install
 
 ```bash
+# Find bundle ID
+xcodebuild -showBuildSettings -scheme <SCHEME> 2>/dev/null | grep PRODUCT_BUNDLE_IDENTIFIER
+
 # Build for the simulator
 xcodebuild build \
   -scheme <SCHEME> \
@@ -148,10 +151,32 @@ xcrun simctl boot "iPhone 11 Pro Max"
 # Check all screenshots were captured
 ls -la ~/Downloads/AppStoreScreenshots/*/
 
-# Verify dimensions
+# Verify dimensions match App Store requirements
 for f in ~/Downloads/AppStoreScreenshots/**/*.png; do
+  echo "=== $f ==="
   sips -g pixelWidth -g pixelHeight "$f" 2>/dev/null
 done
+```
+
+**Display a verification summary inline:**
+
+```markdown
+## Screenshot Capture Summary
+
+| Device | Screenshots | Status |
+|--------|------------|--------|
+| iPhone 16 Pro Max (6.9") | 5 of 5 | ✓ All captured |
+| iPhone 11 Pro Max (6.5") | 5 of 5 | ✓ All captured |
+| iPhone 8 Plus (5.5") | 5 of 5 | ✓ All captured |
+
+### Dimension Verification
+
+| File | Expected | Actual | Status |
+|------|----------|--------|--------|
+| iPhone-6.9/01-Home.png | 1320x2868 | 1320x2868 | ✓ |
+| ... | ... | ... | ... |
+
+**Output:** ~/Downloads/AppStoreScreenshots/
 ```
 
 ### Expected folder structure
@@ -181,11 +206,26 @@ AskUserQuestion with questions:
     "options": [
       {"label": "Add device frames", "description": "Use fastlane frameit to add device bezels"},
       {"label": "Capture dark mode set", "description": "Repeat with appearance set to dark"},
+      {"label": "Capture localized set", "description": "Switch language and repeat for another locale"},
       {"label": "Done", "description": "Screenshots are ready for upload"}
     ],
     "multiSelect": false
   }
 ]
+```
+
+### Localization Workflow
+
+If user selects "Capture localized set":
+
+```bash
+# Set simulator language (e.g., Spanish)
+xcrun simctl shutdown "iPhone 16 Pro Max"
+xcrun simctl boot "iPhone 16 Pro Max" -- -AppleLanguages "(es)" -AppleLocale "es_ES"
+
+# Re-apply status bar, build, install, capture
+# Save to locale-specific subfolder:
+mkdir -p ~/Downloads/AppStoreScreenshots/es/iPhone-6.9/
 ```
 
 ---

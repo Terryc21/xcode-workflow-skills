@@ -1,10 +1,10 @@
 ---
 name: ui-scan
 description: 'UI test environment setup and accessibility scan with recommendations for splash/onboarding bypass. Triggers: "ui scan", "accessibility scan", "ui test setup".'
-version: 2.0.0
+version: 2.1.0
 author: Terry Nyberg
 license: MIT
-allowed-tools: [Grep, Glob, Read, Write, AskUserQuestion]
+allowed-tools: [Grep, Glob, Read, Write, Edit, Bash, AskUserQuestion]
 metadata:
   tier: execution
   category: testing
@@ -140,7 +140,7 @@ Grep pattern="NSPredicate" glob="**/*UITest*.swift" output_mode="count"
 
 ## Step 5: Generate Report
 
-Write findings to `.agents/research/YYYY-MM-DD-ui-scan.md`:
+**Display the summary table and all findings inline**, then write to `.agents/research/YYYY-MM-DD-ui-scan.md`:
 
 ```markdown
 # UI Scan Report
