@@ -130,6 +130,7 @@ Grep pattern="as!" glob="**/*.swift"
 
 # Bare try? — silently ignores errors that users should know about
 # FALSE POSITIVE: try? where nil is the expected/designed fallback
+# INTENTIONAL: try? for operations where failure is acceptable (e.g., deleting a file that may not exist)
 Grep pattern="try\?" glob="**/*.swift"
 
 # Error handling coverage
@@ -143,6 +144,8 @@ Grep pattern="(CloudKit|iCloud|backup|BackupManager)" glob="**/*.swift" output_m
 
 ```bash
 # Fixed font sizes — breaks system text size preferences
+# INTENTIONAL: some hardcoded sizes prevent clipping in constrained containers (e.g., badges, icons)
+# Read each hit — classify as CONFIRMED (should migrate) or INTENTIONAL (constrained layout)
 Grep pattern="\.font\(\.system\(size:" glob="**/*.swift"
 
 # Accessibility label coverage
@@ -182,6 +185,7 @@ Glob pattern="**/PrivacyInfo.xcprivacy"
 ```bash
 # @Query without predicate (loads all data when only some is needed)
 # Read file to check if only .count is accessed (should use fetchCount)
+# INTENTIONAL: views that genuinely need all records (e.g., main item list) are OK
 Grep pattern="@Query\s+(private\s+)?var" glob="**/*.swift"
 
 # Timer usage (potential battery drain)
@@ -202,7 +206,9 @@ Grep pattern="(FileManager|Data\(contentsOf|String\(contentsOf)" glob="**/*View*
 Glob pattern="**/*.swift"
 # After finding files, check line counts with: wc -l <file>
 
-# TODO/FIXME markers (known incomplete work)
+# TODO/FIXME markers — self-documented known work
+# These are INTENTIONAL markers, not bugs. Count for code health grading
+# but do not list individual TODOs as issues
 Grep pattern="(TODO|FIXME|HACK|XXX):" glob="**/*.swift"
 
 # Deprecated API usage
@@ -238,6 +244,7 @@ Grep patterns produce CANDIDATES, not confirmed issues. Before reporting ANY fin
 2. **Classify** — CONFIRMED, FALSE_POSITIVE, or INTENTIONAL
 3. **Never report grep counts as issue counts** — e.g., "150 crash-prone patterns" from matching `!` is misleading; most `!` characters are negations, not force unwraps
 4. **Only report confirmed issues** — false positives are especially damaging for non-technical audiences who can't evaluate accuracy
+5. **INTENTIONAL hits** — note them in the category summary as acknowledged design decisions (e.g., "Some hardcoded font sizes are intentional to prevent clipping"), but do NOT list them as issues in the Issue Rating Table
 
 ---
 
