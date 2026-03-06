@@ -16,6 +16,8 @@ metadata:
 
 **YOU MUST EXECUTE THIS WORKFLOW. Do not just describe it.**
 
+**Required output:** Every finding MUST include Urgency, Risk, ROI, and Blast Radius ratings using the Issue Rating Table format. Do not omit these ratings.
+
 ---
 
 ## Pre-flight: Git Safety Check
@@ -183,7 +185,24 @@ Grep pattern="NSPredicate" glob="**/*UITest*.swift" output_mode="count"
 | Files with .accessibilityLabel | N |
 | Coverage estimate | X% |
 
-## Missing Identifiers
+## Issue Rating Table
+
+All findings rated and sorted by Urgency then ROI:
+
+| # | Finding | Urgency | Risk: Fix | Risk: No Fix | ROI | Blast Radius | Fix Effort |
+|---|---------|---------|-----------|-------------|-----|-------------|------------|
+| 1 | LoginView.swift — Button missing .accessibilityIdentifier | 🟡 High | ⚪ Low | 🟡 High | 🟠 Excellent | ⚪ 1 file | Trivial |
+| 2 | ItemCard.swift — Image missing .accessibilityLabel | 🟢 Medium | ⚪ Low | 🟢 Medium | 🟢 Good | ⚪ 1 file | Trivial |
+
+Use the Issue Rating scale:
+- **Urgency:** 🔴 CRITICAL (interactive element untestable, blocks automation) · 🟡 HIGH (key flow element missing identifier) · 🟢 MEDIUM (secondary element missing identifier) · ⚪ LOW (decorative element)
+- **Risk: Fix:** Risk of adding identifiers (⚪ Low — additive change, no behavioral impact)
+- **Risk: No Fix:** Consequence for UI test coverage and accessibility
+- **ROI:** 🟠 Excellent · 🟢 Good · 🟡 Marginal · 🔴 Poor
+- **Blast Radius:** How many test files / flows are affected by the missing identifier
+- **Fix Effort:** Trivial / Small / Medium / Large
+
+## Missing Identifiers (Detail)
 
 | File | Element Type | Recommendation |
 |------|-------------|----------------|

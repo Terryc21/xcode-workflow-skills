@@ -1,7 +1,7 @@
 ---
 name: safe-refactor
 description: 'Plan refactoring with blast radius analysis, dependency mapping, and rollback strategy. Triggers: "refactor", "safe refactor", "restructure", "rename type", "extract protocol".'
-version: 2.2.0
+version: 2.5.0
 author: Terry Nyberg
 license: MIT
 allowed-tools: [Glob, Grep, Read, Bash, Edit, Write, LSP, AskUserQuestion]
@@ -138,9 +138,9 @@ Present one table per file type. Columns combine color indicators with actual nu
 
 ### Views (trigger: >600 lines)
 
-| # | File | Lines | Over | Blast Radius | #if os | Funcs | Tests | ROI | Effort |
-|---|------|-------|------|-------------|--------|-------|-------|-----|--------|
-| 1 | `FileName` | 1289 | 🟡 +289 | 🟢 5 files | 🟡 10 | 1 | Partial | 🟢 Good | Large |
+| # | File | Lines | Over | Blast Radius | Platform Splits | Functions | Tests | Urgency | ROI | Effort |
+|---|------|-------|------|-------------|-----------------|-----------|-------|---------|-----|--------|
+| 1 | `FileName` | 1289 | 🟡 +289 | 🟢 5 files | 🟡 10 | 1 | Partial | 🟡 High | 🟢 Good | Large |
 
 ### ViewModels (trigger: >500 lines)
 ...
@@ -158,7 +158,13 @@ Present one table per file type. Columns combine color indicators with actual nu
 |--------|--------|-----------|---------|
 | **Over** | <50 lines | 50–200 lines | >200 lines |
 | **Blast Radius** | 0–2 files | 3–8 files | >8 files |
-| **#if os** | 0–3 blocks | 4–8 blocks | >8 blocks |
+| **Platform Splits** | 0–3 blocks | 4–8 blocks | >8 blocks |
+
+**Urgency** (when does this need to happen):
+- 🔴 Critical — actively causing merge conflicts, blocking other work, or growing every sprint
+- 🟡 High — significantly over threshold, frequently edited file, or upcoming feature work will make it worse
+- 🟢 Medium — over threshold but stable, infrequently edited
+- ⚪ Low — barely over threshold, not actively growing
 
 **ROI** (synthesized judgment):
 - 🟠 Excellent — blocking other work or causing merge conflicts
@@ -385,7 +391,69 @@ After each step:
 
 ---
 
-## Phase 9: Generate Report
+## Phase 9: Final Build Verification
+
+After all steps are committed, run a clean build on **every platform** the project supports.
+
+### 9.1: Detect Project Platforms
+
+```bash
+# Check for platform destinations in the Xcode project
+grep -r "SUPPORTED_PLATFORMS\|SDKROOT" *.xcodeproj/project.pbxproj | sort -u
+
+# Or check Package.swift for platform targets
+grep -i "\.iOS\|\.macOS\|\.watchOS\|\.tvOS\|\.visionOS" Package.swift 2>/dev/null
+```
+
+Common platform indicators:
+- `#if os(iOS)` / `#if os(macOS)` in source → multi-platform project
+- `SDKROOT = iphoneos` + `SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx"` → iOS + macOS
+- Separate targets for watchOS/tvOS/visionOS extensions
+
+### 9.2: Build Each Platform
+
+Build each detected platform. Use simulator destinations for device platforms:
+
+```bash
+# iOS
+xcodebuild build -scheme <scheme> -destination 'platform=iOS Simulator,name=<device>' -quiet
+
+# macOS
+xcodebuild build -scheme <scheme> -destination 'platform=macOS' -quiet
+
+# watchOS (if applicable)
+xcodebuild build -scheme <watchScheme> -destination 'platform=watchOS Simulator,name=<device>' -quiet
+
+# tvOS (if applicable)
+xcodebuild build -scheme <tvScheme> -destination 'platform=tvOS Simulator,name=<device>' -quiet
+
+# visionOS (if applicable)
+xcodebuild build -scheme <visionScheme> -destination 'platform=visionOS Simulator,name=<device>' -quiet
+```
+
+If a simulator device name fails, list available simulators:
+```bash
+xcrun simctl list devices available | grep -i "<platform>"
+```
+
+### 9.3: Record Results
+
+Record build results in the report:
+
+```markdown
+## Final Build Verification
+
+| Platform | Result |
+|----------|--------|
+| iOS | ✓ BUILD SUCCEEDED |
+| macOS | ✓ BUILD SUCCEEDED |
+```
+
+If any platform fails, investigate — the refactoring may have introduced a platform-specific issue (e.g., missing `#if os` guard, unavailable API). Fix before generating the report.
+
+---
+
+## Phase 10: Generate Report
 
 **Display the refactoring plan and all findings inline**, then write to `.agents/research/YYYY-MM-DD-refactor-{target}.md`:
 
@@ -417,7 +485,41 @@ After each step:
 | Step | Build | Tests | Verified |
 |------|-------|-------|----------|
 | 1 | ✓ / ✗ | ✓ / ✗ | ✓ / ✗ |
+
+## Final Build Verification
+
+| Platform | Result |
+|----------|--------|
+| iOS | ✓ / ✗ |
+| macOS | ✓ / ✗ |
 ```
+
+---
+
+## Phase 11: Next Target
+
+If Step 1 identified multiple refactoring candidates, offer to continue:
+
+```
+AskUserQuestion with questions:
+[
+  {
+    "question": "Refactoring complete. Would you like to continue to the next candidate from the risk assessment table?",
+    "header": "Next target",
+    "options": [
+      {"label": "Yes, next candidate", "description": "Pick the next target from the table and start Phases 1–10"},
+      {"label": "No, done for now", "description": "End the refactoring session"}
+    ],
+    "multiSelect": false
+  }
+]
+```
+
+If **Yes**: Re-display the risk assessment table (updated with the completed target marked ✓), let the user pick the next target, and loop back to **Step 2** (gather refactoring details) through **Phase 10** (generate report). Each target gets its own commits and report file.
+
+If **No**: End the session.
+
+Skip this phase if Step 1 found only one candidate or the user specified a single target directly.
 
 ---
 
@@ -451,6 +553,10 @@ Phase 6 — Plan:
           Commit: "Add MockItemHelper for testing"
 
 Phase 7 — Verify: Build + tests after each step ✓
+
+Phase 9 — Final Build:
+  iOS: ✓ BUILD SUCCEEDED
+  macOS: ✓ BUILD SUCCEEDED
 ```
 
 ---
@@ -462,6 +568,7 @@ Phase 7 — Verify: Build + tests after each step ✓
 3. **Rename before restructure** — rename/move first, then modify
 4. **Add tests before refactoring** — if coverage is low, add tests first
 5. **Small steps** — many small commits > one big commit
+6. **Reduce as much as safely possible** — don't stop at "just under the threshold." Extract along every natural seam (sections, modifiers, helpers, bridge properties, platform-specific code) until no further clean extraction is possible. The threshold is a trigger to start; the goal is the leanest file that still reads clearly.
 
 ---
 

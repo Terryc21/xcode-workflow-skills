@@ -16,6 +16,8 @@ metadata:
 
 **YOU MUST EXECUTE THIS WORKFLOW. Do not just describe it.**
 
+**Required output:** Every finding MUST include Urgency, Risk, ROI, and Blast Radius ratings using the Issue Rating Table format. Do not omit these ratings.
+
 **Safety Rule:** NEVER auto-delete code. Report only. Require explicit user approval for any removal.
 
 ---
@@ -237,7 +239,25 @@ Before reporting ANY finding:
 | HIGH | X | Safe to remove |
 | MEDIUM | Y | Verify before removing |
 
-## HIGH Confidence (Safe to Remove)
+## Issue Rating Table
+
+| # | Finding | Urgency | Risk: Fix | Risk: No Fix | ROI | Blast Radius | Fix Effort |
+|---|---------|---------|-----------|-------------|-----|-------------|------------|
+| 1 | `formatLegacyDate()` — private func, ItemHelper.swift:45 (15 lines, HIGH confidence) | 🟢 Medium | ⚪ Low | ⚪ Low | 🟠 Excellent | ⚪ 1 file | Trivial |
+| 2 | `oldAPIEndpoint` — private let, Constants.swift:12 (HIGH confidence) | ⚪ Low | ⚪ Low | ⚪ Low | 🟠 Excellent | ⚪ 1 file | Trivial |
+| 3 | `processLegacyData()` — internal func, DataManager.swift:89 (MEDIUM confidence, test-only ref) | ⚪ Low | 🟢 Medium | ⚪ Low | 🟡 Marginal | 🟢 2 files | Small |
+
+Use the Issue Rating scale:
+- **Urgency:** 🔴 CRITICAL (blocks build/causes crash) · 🟡 HIGH (confuses maintainers, hides real code) · 🟢 MEDIUM (clutters codebase) · ⚪ LOW (minor noise)
+- **Risk: Fix:** Risk of removing the code (⚪ Low for HIGH confidence private, 🟡 High for MEDIUM confidence internal)
+- **Risk: No Fix:** Cost of leaving dead code (confusion, build time, false grep hits)
+- **ROI:** 🟠 Excellent · 🟢 Good · 🟡 Marginal · 🔴 Poor
+- **Blast Radius:** How many files reference or import the dead symbol
+- **Fix Effort:** Trivial (delete lines) / Small (delete + update imports) / Medium (extract or restructure) / Large (cross-module)
+
+## Detailed Findings
+
+### HIGH Confidence (Safe to Remove)
 
 These symbols have no references and are private/fileprivate scope.
 
@@ -259,11 +279,11 @@ private func formatLegacyDate(_ date: Date) -> String {
 private let oldAPIEndpoint = "https://api.v1.example.com"
 ```
 
-## MEDIUM Confidence (Verify First)
+### MEDIUM Confidence (Verify First)
 
 These need human review before removal.
 
-### 1. `processLegacyData()` — internal func
+### 3. `processLegacyData()` — internal func
 **File:** Sources/Managers/DataManager.swift:89
 **Note:** Only referenced in test file `DataManagerTests.swift:45`
 
