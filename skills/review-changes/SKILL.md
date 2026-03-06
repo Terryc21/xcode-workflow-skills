@@ -1,10 +1,10 @@
 ---
 name: review-changes
-description: 'Pre-commit review of staged changes for bugs, style issues, and missing tests. Concrete patterns, not just checklists. Triggers: "review changes", "review my code", "check before commit", "pre-commit review".'
-version: 1.1.0
+description: 'Pre-commit review of staged/unstaged changes for bugs, security, performance, and missing tests. Scoped to changed files only. Triggers: "review changes", "review my code", "check before commit", "pre-commit review".'
+version: 2.0.0
 author: Terry Nyberg
 license: MIT
-allowed-tools: [Bash, Glob, Grep, Read, AskUserQuestion]
+allowed-tools: [Bash, Glob, Grep, Read, Write, AskUserQuestion]
 metadata:
   tier: execution
   category: analysis
@@ -12,26 +12,17 @@ metadata:
 
 # Review Changes
 
-> **Quick Ref:** Pre-commit code review: correctness, security, performance, style, tests. Output: summary with file:line issues table.
+> **Quick Ref:** Pre-commit code review scoped to changed files. Output: inline summary with Issue Rating Table.
 
 **YOU MUST EXECUTE THIS WORKFLOW. Do not just describe it.**
 
-Pre-commit review of staged/modified changes for bugs, style issues, and missing tests.
-
-## Quick Commands
-
-| Command | Description |
-|---------|-------------|
-| `/review-changes` | Review all uncommitted changes |
-| `/review-changes --staged` | Review only staged changes |
-| `/review-changes --last-commit` | Review the most recent commit |
-| `/review-changes path/to/File.swift` | Review changes in a specific file |
+All findings use the **Issue Rating Table** format. Do not use prose severity tags.
 
 ---
 
 ## Step 1: Identify Changes
 
-### 1.1: Get the Diff
+### 1.1: Get Changed Files
 
 ```bash
 # Check what's staged vs unstaged
@@ -42,299 +33,235 @@ git diff --staged --name-only
 
 # If nothing staged, get all uncommitted changes
 git diff --name-only
-
-# For last commit review
-git diff HEAD~1 --name-only
 ```
 
-### 1.2: Get Full Diff Content
+Note which mode you're using: staged, unstaged, or last commit (`git diff HEAD~1 --name-only`).
+
+### 1.2: Get Full Diff
 
 ```bash
 # Staged diff with context
 git diff --staged
 
-# Or unstaged diff
+# Or unstaged
 git diff
-
-# Or last commit
-git diff HEAD~1
 ```
 
 ### 1.3: Read Each Changed File
 
-For every changed file, read the full file (not just the diff) to understand context:
+For every changed `.swift` file, **read the full file** to understand context:
 
 ```
-# Read each changed file
-Read file_path="Sources/Features/ItemDetail/ItemDetailViewModel.swift"
+Read file_path="path/to/changed/file.swift"
 ```
 
-**Important:** Don't review diffs in isolation. Read the full file to understand surrounding context, imports, class structure, and patterns.
+**Important:** Don't review diffs in isolation. Read the full file to understand surrounding context, imports, class structure, and existing patterns.
+
+### 1.4: CLAUDE.md Check (Optional)
+
+If the project has a CLAUDE.md, read it to understand project-specific coding standards and conventions. Apply those standards during the review.
 
 ---
 
-## Step 2: Correctness Review
+## Step 2: Review Each Changed File
 
-For each changed file, check for these concrete patterns:
+For every changed file, check for these patterns. **Only flag issues in changed or added lines** — don't report pre-existing issues in untouched code.
 
-### 2.1: Null/Nil Safety
+### 2.1 Correctness
 
+Look in the diff for:
+
+```bash
+# Force casts — crash if wrong type
+# FALSE POSITIVE: as! after guard let/is check is already validated
+Grep pattern="as!" path="<changed_file>"
+
+# Force try — crashes on error instead of handling
+Grep pattern="try!" path="<changed_file>"
+
+# Bare try? — silently swallows errors
+# FALSE POSITIVE: try? where nil is the designed fallback
+Grep pattern="try\?" path="<changed_file>"
+
+# Empty catch blocks — swallowing errors
+Grep pattern="catch\s*\{\s*\}" path="<changed_file>"
 ```
-# Force unwraps (potential crash points)
-Grep pattern="\\w+!" glob="*.swift" output_mode="content"
-# Exclude IBOutlets and common safe patterns — review each manually
 
-# Implicit unwrapped optionals in declarations
-Grep pattern="var \\w+:.*\\!" glob="*.swift" output_mode="content"
-
-# Force try (swallowing error details)
-Grep pattern="try!" glob="*.swift" output_mode="content"
-
-# Force cast (crash if wrong type)
-Grep pattern="as!" glob="*.swift" output_mode="content"
-```
-
-### 2.2: Logic Errors
-
-Look for in the diff:
+Also check manually:
 - Off-by-one errors in loops and array indexing
-- Boundary conditions (empty arrays, zero values, max values)
-- Boolean logic inversions (`&&` vs `||`, `!` misplaced)
-- Unreachable code after early returns
+- Boundary conditions (empty arrays, zero values)
+- Boolean logic inversions (`&&` vs `||`, misplaced `!`)
 - Switch statements missing cases (without `@unknown default`)
 
-### 2.3: Error Handling
+### 2.2 Security
 
-```
-# Functions that throw but callers might not handle errors
-Grep pattern="try\\s" glob="*.swift" output_mode="content"
-
-# Catch blocks that swallow errors silently
-Grep pattern="catch\\s*\\{\\s*\\}" glob="*.swift" output_mode="content"
-
-# Optional try that silently returns nil on error
-Grep pattern="try\\?" glob="*.swift" output_mode="content"
-```
-
-### 2.4: Concurrency Issues
-
-```
-# Mutable state without actor/synchronization protection
-# Look for var properties in classes that might be accessed from multiple tasks
-Grep pattern="class \\w+[^{]*\\{" glob="*.swift" output_mode="content"
-
-# @MainActor usage — is UI code properly isolated?
-Grep pattern="@MainActor" glob="*.swift" output_mode="content"
-
-# Task {} without checking cancellation
-Grep pattern="Task\\s*\\{" glob="*.swift" output_mode="content"
-
-# nonisolated access to actor state
-Grep pattern="nonisolated" glob="*.swift" output_mode="content"
-```
-
----
-
-## Step 3: Security Review
-
-```
-# Hardcoded secrets, API keys, tokens
-Grep pattern="(api[_-]?key|secret|token|password|credential)\\s*[:=]\\s*\"[^\"]+\"" glob="*.swift" -i output_mode="content"
-
-# URLs with credentials embedded
-Grep pattern="https?://[^@]+@" glob="*.swift" output_mode="content"
+```bash
+# Hardcoded secrets in changed files
+Grep pattern="(api[_-]?key|apikey|secret[_-]?key|client[_-]?secret)\\s*[:=]\\s*[\\\"'][^\\\"']+[\\\"']" path="<changed_file>" -i
 
 # Sensitive data being logged
-Grep pattern="(print|NSLog|os_log|Logger).*\\b(password|token|secret|ssn|credit)" glob="*.swift" -i output_mode="content"
+Grep pattern="(print|NSLog|os_log|Logger).*\\b(password|token|secret|credential)" path="<changed_file>" -i
 
-# User input used directly without validation
-# (Look for text field values passed directly to URLs, database queries, etc.)
+# HTTP URLs (non-HTTPS)
+# FALSE POSITIVE: http://localhost, XML namespace URIs
+Grep pattern="http://" path="<changed_file>"
 ```
 
----
+### 2.3 Performance
 
-## Step 4: Performance Review
+Look in the diff for:
+- File I/O or network calls not in async/Task context
+- Formatters (`DateFormatter()`, `NumberFormatter()`) created inside view body (should be cached)
+- `@Query` without predicate when only a subset is needed
+- Sorting/filtering in `var body` (recomputed every render)
 
-```
-# Expensive operations that might be on main thread
-# Look for file I/O, network calls, or heavy computation not in Task/async
-Grep pattern="FileManager|URLSession|Data\\(contentsOf" glob="*.swift" output_mode="content"
+### 2.4 Concurrency
 
-# Large data operations without pagination
-Grep pattern="fetchAll|\.fetch\\(" glob="*.swift" output_mode="content"
+Look in the diff for:
+- `DispatchQueue.main.async` — should this use `@MainActor` instead?
+- `Task {}` in a non-isolated context — does it need `@MainActor`?
+- Mutable `var` properties in classes accessed from multiple tasks without actor protection
+- Missing `@MainActor` on ViewModels that access `ModelContext`
 
-# String interpolation in loops (potential allocation overhead)
-Grep pattern="for .* in .*(\"\\\\\\()" glob="*.swift" output_mode="content"
+### 2.5 SwiftUI Patterns
 
-# Repeated work that could be cached
-# (Look for identical function calls in the same scope)
-```
+Look in the diff for:
+- `@ObservedObject` where `@StateObject` is needed (object recreated on view rebuild)
+- `@State` with reference types (should use `@State` with `@Observable`)
+- Bare `Task {}` in view body instead of `.task {}` modifier
+- Missing loading/error states for async operations
 
----
+### 2.6 Style & Consistency
 
-## Step 5: SwiftUI-Specific Review
+Read surrounding code in each changed file to verify:
+- Naming conventions match existing patterns (camelCase, PascalCase)
+- Error handling style is consistent (Result vs throws vs optional)
+- File organization matches (MARK sections, property ordering)
+- No leftover `print()` debug statements
 
-```
-# Property wrapper usage
-Grep pattern="@State |@StateObject |@ObservedObject |@EnvironmentObject |@Bindable |@Observable " glob="*.swift" output_mode="content"
+### 2.7 Code Duplication
 
-# Common mistakes:
-# - @ObservedObject when @StateObject is needed (object recreated on view rebuild)
-# - @State for reference types (should use @StateObject or @State with @Observable)
+For key functions/patterns in the diff, search for similar existing code:
 
-# Expensive work in view body
-# (Look for function calls, filtering, sorting inside body computed property)
-Grep pattern="var body.*View" glob="*.swift" -A 20 output_mode="content"
-
-# Missing .task or .onAppear for async loading
-Grep pattern="Task\\s*\\{" glob="*.swift" output_mode="content"
-# Verify these are inside .task { } modifier, not bare Task { } in init or body
-```
-
----
-
-## Step 6: Style & Consistency
-
-### 6.1: Check Against Existing Patterns
-
-Read surrounding code to verify the new code follows the same patterns:
-
-- Naming conventions (camelCase functions, PascalCase types)
-- File organization (MARK sections, property ordering)
-- Error handling style (Result vs throws vs optional)
-- Dependency injection style (init injection vs environment)
-
-### 6.2: Code Duplication
-
-```
+```bash
 # Search for similar patterns already in codebase
-# Take a key function/pattern from the changed code and search for duplicates
-Grep pattern="functionNameOrPattern" glob="*.swift" output_mode="files_with_matches"
+Grep pattern="<key_pattern_from_diff>" glob="**/*.swift" output_mode="files_with_matches"
 ```
 
 If duplicate logic exists, flag it and suggest extracting to a shared function.
 
 ---
 
-## Step 7: Test Coverage
+## Step 3: Verification Rule
 
-### 7.1: Check for Existing Tests
+Before reporting ANY finding:
 
-```
-# Find test files for the changed source files
-# If changed: Sources/Features/Scanner/ScannerViewModel.swift
-# Look for: Tests/**/ScannerViewModel*Tests.swift
-
-Glob pattern="Tests/**/*Tests.swift"
-
-# Check if the changed functions have test coverage
-Grep pattern="test.*FunctionName|FunctionName" path="Tests" glob="*.swift"
-```
-
-### 7.2: Evaluate Test Needs
-
-For each changed file, assess:
-
-| Change Type | Test Needed? |
-|-------------|--------------|
-| New public function | Yes — unit test |
-| Bug fix | Yes — regression test |
-| New UI view | Consider — UI test or snapshot |
-| Refactor (no behavior change) | Existing tests should still pass |
-| Config/constant change | Usually no |
-
-### 7.3: Flag Missing Tests
-
-If important new logic lacks tests, note it in the report with a suggestion to run `/generate-tests`.
+1. **Confirm it's in changed/added code** — don't flag pre-existing issues
+2. **Read context** — at minimum 10 lines around the match
+3. **Check for intentional patterns** — `try?` may be designed fallback, `as!` may follow validation
+4. **Classify** — CONFIRMED, FALSE_POSITIVE, or PRE_EXISTING
 
 ---
 
-## Step 8: Generate Review Report
+## Step 4: Test Coverage Check
 
-Present findings in this format:
+### 4.1: Find Existing Tests
+
+```bash
+# Find test files for each changed source file
+# If changed: Sources/Features/Scanner/ScannerViewModel.swift
+# Look for: Tests/**/Scanner*Tests.swift
+Glob pattern="**/*Tests.swift"
+```
+
+### 4.2: Evaluate Test Needs
+
+| Change Type | Test Needed? |
+|-------------|--------------|
+| New public function/method | Yes — unit test |
+| Bug fix | Yes — regression test |
+| New UI view | Consider — snapshot or UI test |
+| Refactor (no behavior change) | Existing tests should still pass |
+| Config/constant change | Usually no |
+
+### 4.3: Flag Missing Tests
+
+If important new logic lacks tests, note it in the report.
+
+---
+
+## Step 5: Generate Review Report
+
+Present findings inline (not written to a file — this is a quick review, not an audit):
 
 ```markdown
 ## Code Review Summary
 
-**Scope:** [staged changes / unstaged / last commit]
+**Scope:** [staged / unstaged / last commit]
 **Files Changed:** N
 **Lines Added/Removed:** +X / -Y
-**Risk Level:** Low / Medium / High
-**Recommendation:** Ready to commit / Needs fixes / Needs discussion
+**Verdict:** [Ready to commit / Needs fixes / Blocked]
 
-### Issues Found
+## Positive Notes
 
-| # | File:Line | Severity | Category | Issue | Suggested Fix |
-|---|-----------|----------|----------|-------|---------------|
-| 1 | ItemDetailVM.swift:45 | High | Correctness | Force unwrap of optional `item.category!` | Use `item.category ?? "Default"` |
-| 2 | NetworkService.swift:89 | Medium | Security | API key hardcoded in source | Move to Keychain or .xcconfig |
-| 3 | ListView.swift:23 | Low | Performance | Sorting in body — triggers on every rebuild | Move to computed property or .onChange |
+[Anything done well — good patterns, clean code, proper error handling]
 
-### Positive Notes
+## Issue Rating Table
 
-- [Anything done well — good patterns, clean code, proper error handling]
+| # | Finding | Urgency | Risk: Fix | Risk: No Fix | ROI | Blast Radius | Fix Effort |
+|---|---------|---------|-----------|-------------|-----|-------------|------------|
+| 1 | file.swift:45 — Force unwrap of optional `item.category!` | 🟡 High | ⚪ Low | 🟡 High | 🟠 Excellent | ⚪ 1 file | Trivial |
 
-### Test Coverage
+## Test Coverage
 
 | Changed File | Has Tests? | Tests Needed? |
 |--------------|------------|---------------|
 | ItemDetailVM.swift | Yes (12 tests) | Add edge case for nil category |
 | NetworkService.swift | No | Yes — unit tests for new endpoint |
 
-### Verdict
+## Verdict
 
 [One of:]
-- ✅ **Ready to commit.** No issues found.
-- ⚠️ **N issues found.** Address items #1, #2 before committing. Item #3 is optional.
-- 🛑 **Blocked.** Critical issues #1, #2 must be fixed first.
+- **Ready to commit.** No issues found.
+- **N issues found.** Address items #1, #2 before committing. Item #3 is optional.
+- **Blocked.** Critical issues #1, #2 must be fixed first.
 ```
+
+Use the Issue Rating scale:
+- **Urgency:** 🔴 CRITICAL (crash/data loss) · 🟡 HIGH (fix before commit) · 🟢 MEDIUM (should fix) · ⚪ LOW (nice-to-have)
+- **ROI:** 🟠 Excellent · 🟢 Good · 🟡 Marginal · 🔴 Poor
+- **Fix Effort:** Trivial / Small / Medium / Large
 
 ---
 
-## Worked Example
+## Step 6: Follow-up
 
 ```
-User: /review-changes
-
-Step 1: git diff --staged --name-only
-  → ItemDetailViewModel.swift
-  → NetworkService.swift
-
-Step 2: Read both files, review diff
-
-Findings:
-  #1 HIGH — ItemDetailViewModel.swift:45
-     Force unwrap `item.category!` — will crash if category is nil
-     Fix: Use nil coalescing `item.category ?? "Uncategorized"`
-
-  #2 MEDIUM — NetworkService.swift:12
-     API base URL hardcoded: "https://api.example.com"
-     Fix: Move to configuration file or environment variable
-
-  #3 LOW — ItemDetailViewModel.swift:78
-     print() statement left in from debugging
-     Fix: Remove or replace with os_log
-
-Verdict: ⚠️ 3 issues found. Fix #1 (crash risk) before committing.
-         #2 and #3 are recommended but not blocking.
+AskUserQuestion with questions:
+[
+  {
+    "question": "How would you like to proceed?",
+    "header": "Next",
+    "options": [
+      {"label": "Fix issues now", "description": "Walk through each issue with fixes, then re-review"},
+      {"label": "Commit as-is", "description": "Issues noted but acceptable for now"},
+      {"label": "Review is sufficient", "description": "I'll fix manually"}
+    ],
+    "multiSelect": false
+  }
+]
 ```
+
+If "Fix issues now": Walk through each finding, show the problematic code, propose a fix, apply after user approval. After all fixes, re-run a quick review to confirm.
 
 ---
 
-## For iOS-Specific Code Review
+## Troubleshooting
 
-This skill focuses on general code review patterns. For deep iOS-specific analysis:
-
-- **Security deep-dive:** Run `/security-audit`
-- **Performance deep-dive:** Run `/performance-check`
-- **SwiftUI architecture:** Invoke Axiom agent `/axiom:audit swiftui-architecture`
-- **Concurrency correctness:** Invoke Axiom agent `/axiom:audit concurrency`
-
----
-
-## See Also
-
-- `/debug` — When review reveals a bug that needs investigation
-- `/security-audit` — For deeper security analysis
-- `/scan-similar-bugs` — After fixing an issue found during review
-- `/generate-tests` — Generate tests for uncovered changes
+| Problem | Solution |
+|---------|----------|
+| No staged changes | Fall back to `git diff` for unstaged, or `git diff HEAD~1` for last commit |
+| Too many changed files | Focus on `.swift` files first; skip assets, configs unless security-relevant |
+| Pre-existing issues tempting to fix | Note them separately as "out of scope" — don't mix with review findings |
+| Can't determine if pattern is intentional | Read 20+ lines of context; check if there's a comment explaining the choice |
+| Changed file is a test file | Review test quality: assertions present, edge cases covered, no `sleep()` |
