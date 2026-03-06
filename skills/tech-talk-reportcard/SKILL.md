@@ -1,10 +1,10 @@
 ---
 name: tech-talk-reportcard
-description: Technical codebase analysis with A-F grades for architecture, security, performance, concurrency, accessibility, code quality, UI, testing, and tooling
-version: 2.0.0
+description: 'Technical codebase analysis with A-F grades across 9 categories. Self-contained iOS/Swift audit with automated grep scanning, verification, and Issue Rating Tables. Triggers: "tech report card", "grade my codebase", "technical audit".'
+version: 3.0.0
 author: Terry Nyberg
 license: MIT
-allowed-tools: [Task, Glob, Grep, Read, Write, AskUserQuestion]
+allowed-tools: [Glob, Grep, Read, Write, AskUserQuestion]
 metadata:
   tier: analysis
   category: analysis
@@ -14,15 +14,15 @@ metadata:
 
 **YOU MUST EXECUTE THIS WORKFLOW. Do not just describe it.**
 
-**Required output:** Every issue/finding MUST include Urgency, Risk, ROI, and Blast Radius ratings. Do not omit these ratings.
+Generate a technical report card with A-F grades across 9 categories for iOS/Swift codebases.
 
-Generate a comprehensive technical report card for developers and technical stakeholders.
+All findings use the **Issue Rating Table** format. Do not use prose severity tags like `[HIGH]` or `[MED]` — always render the full rating table.
 
 ---
 
-## Step 1: Initial Questions
+## Step 1: Before Starting
 
-**IMPORTANT**: Before reading any files, ask the user about analysis options:
+Ask the user about analysis options:
 
 ```
 AskUserQuestion with questions:
@@ -37,19 +37,10 @@ AskUserQuestion with questions:
     "multiSelect": false
   },
   {
-    "question": "How would you like to run this analysis?",
-    "header": "Mode",
-    "options": [
-      {"label": "Fast (parallel)", "description": "Multiple agents run simultaneously - faster, more prompts"},
-      {"label": "Quiet (sequential)", "description": "Single agent, fewer prompts - takes longer"}
-    ],
-    "multiSelect": false
-  },
-  {
-    "question": "What is your timeline for this audit?",
+    "question": "What is your timeline?",
     "header": "Timeline",
     "options": [
-      {"label": "Pre-release", "description": "Preparing for App Store - urgency matters"},
+      {"label": "Pre-release", "description": "Preparing for App Store — urgency matters"},
       {"label": "Post-release", "description": "App is live, ongoing improvement"},
       {"label": "Planning phase", "description": "Gathering info for roadmap"}
     ],
@@ -59,19 +50,19 @@ AskUserQuestion with questions:
     "question": "Any categories to emphasize or skip?",
     "header": "Focus",
     "options": [
-      {"label": "Full analysis (Recommended)", "description": "Grade all categories"},
+      {"label": "Full analysis (Recommended)", "description": "Grade all 9 categories"},
       {"label": "Skip accessibility", "description": "Not prioritizing accessibility now"},
-      {"label": "Skip backend", "description": "App is standalone, no backend"},
-      {"label": "Emphasize performance", "description": "Users report slowness or battery drain"}
+      {"label": "Emphasize performance", "description": "Users report slowness or battery drain"},
+      {"label": "Emphasize security", "description": "Handling sensitive data or preparing for review"}
     ],
     "multiSelect": true
   }
 ]
 ```
 
-**If user selects "Yes" for CLAUDE.md:** Read CLAUDE.md at the repo root and summarize its key points in 3-5 bullets. Use these guidelines throughout the analysis.
+**If "Yes" for CLAUDE.md:** Read CLAUDE.md at the repo root and summarize its key points in 3-5 bullets. Use these guidelines throughout the analysis.
 
-**If user selects "No":** Skip reading CLAUDE.md entirely. Note in the report that CLAUDE.md was intentionally excluded.
+**If "No":** Skip CLAUDE.md. Note in the report that it was intentionally excluded.
 
 ### Freshness
 
@@ -80,79 +71,96 @@ files in `.agents/`, `scratch/`, or prior audit reports. Ignore cached
 findings from auto-memory or previous sessions. Every finding must come
 from scanning the actual codebase as it exists now.
 
+**Exception:** Reading a previous report card's **grades only** (not findings) for trend comparison is allowed in Step 2.
+
 ---
 
-## Step 2: Check for Previous Reports
+## Step 2: Trend Check
 
-Before scanning, check for existing reports to enable trend comparison:
+Check for a previous report to enable grade trend comparison:
 
-```bash
+```
 Glob pattern=".agents/research/*-tech-reportcard.md"
 ```
 
-If previous reports exist, note the most recent one for comparison in the final output.
+If found, read ONLY the grade summary line from the most recent report. Do not read or reuse any findings — those must come fresh from scanning.
 
 ---
 
 ## Step 3: Codebase Exploration
 
-Scan the project structure and key configuration files. Analyze:
+Scan the project structure and key configuration files:
 
-1. **Project metrics** - File counts, LOC, targets, schemes
-2. **Architecture & modules** - Main modules, patterns (MVC/MVVM/etc.), frameworks
-3. **App purpose & features** - Purpose and primary user flows
-4. **Data flow & state management** - How state is managed between layers
+1. **Project metrics** — File counts, LOC (estimate via `wc -l`), targets, schemes
+2. **Architecture** — Main modules, patterns (MVC/MVVM/etc.), frameworks used
+3. **App purpose** — What the app does, primary user flows
+4. **State management** — How data flows between layers (@Observable, SwiftData, etc.)
 
 ---
 
 ## Step 4: Automated Scans
 
-Run these grep patterns to detect issues automatically. Execute all scans before compiling findings.
+Run all grep patterns below before compiling findings. Every section includes false-positive guidance — **read flagged files before reporting any finding**.
 
-### 4.1 Architecture Patterns
+### 4.1 Architecture
 
 ```bash
-# God classes - ViewModels > 500 lines (check manually after grep)
-Grep pattern="class.*ViewModel" glob="**/*ViewModel.swift" output_mode="files_with_matches"
+# Large files (>500 lines) — maintainability signal
+# After finding files, check line counts with wc -l
+Glob pattern="**/*.swift"
 
 # Missing @MainActor on ObservableObject
-Grep pattern="class.*:.*ObservableObject(?!.*@MainActor)" glob="**/*.swift"
+# FALSE POSITIVE: ObservableObject subclass that delegates to @MainActor property is fine
+Grep pattern="class.*:.*ObservableObject" glob="**/*.swift"
 
-# Circular dependencies (imports within same module)
-Grep pattern="^import\s+" glob="**/*.swift" output_mode="content"
+# Deep view body nesting — read file and check body complexity
+# Only flag if view body exceeds ~80 lines or has >3 levels of conditional nesting
+Grep pattern="var body.*some View" glob="**/*View*.swift"
 ```
 
-### 4.2 Security Patterns
+### 4.2 Code Quality
+
+```bash
+# Force casts — crash risk
+# FALSE POSITIVE: as! in test code or after is/guard let check is safe
+Grep pattern="as!" glob="**/*.swift"
+
+# Force unwraps (excluding IBOutlets and test files)
+# FALSE POSITIVE: dictionary literals, known-safe patterns, test assertions
+Grep pattern="[^I]!" glob="**/*.swift"
+
+# Bare try? swallowing errors silently
+# FALSE POSITIVE: try? in optional chaining where nil is the expected fallback
+Grep pattern="try\?" glob="**/*.swift"
+
+# TODO/FIXME/HACK markers
+Grep pattern="(TODO|FIXME|HACK|XXX):" glob="**/*.swift"
+```
+
+### 4.3 Security
 
 ```bash
 # Hardcoded secrets
 Grep pattern="(api[_-]?key|apikey|secret[_-]?key|client[_-]?secret|password|token)\s*[:=]\s*[\"'][^\"']+[\"']" glob="**/*.swift" -i
 
 # Sensitive data in UserDefaults
-Grep pattern="UserDefaults.*\.(password|token|secret|apiKey|credentials)" glob="**/*.swift" -i
-
-# Force unwraps in auth code
-Grep pattern="!" glob="**/*Auth*.swift"
+Grep pattern="(UserDefaults|@AppStorage).*\b(password|token|secret|apiKey|credential)" glob="**/*.swift" -i
 
 # HTTP URLs (non-HTTPS)
+# FALSE POSITIVE: http://localhost, XML namespace URIs, protocol-detection logic
 Grep pattern="http://" glob="**/*.swift"
 
 # Logging sensitive data
-Grep pattern="(print|NSLog|os_log|Logger).*\((password|token|secret|key)" glob="**/*.swift" -i
+Grep pattern="(print|NSLog|os_log|Logger).*\b(password|token|secret|key|credential)" glob="**/*.swift" -i
 ```
 
-### 4.3 Performance Patterns
+### 4.4 Performance
 
-**NOTE:** These patterns produce CANDIDATES, not confirmed issues. Verify each by reading the file.
+**NOTE:** These patterns produce CANDIDATES. Verify each by reading the file.
 
 ```bash
-# Missing [weak self] in closures
-# FALSE POSITIVE: SwiftUI struct views don't need weak self — only flag classes
-Grep pattern="\{\s*\[(?!weak|unowned)" glob="**/*.swift"
-
 # @Query without predicate (full table scans)
-# CLASSIFY EACH HIT by actual usage: COUNT_ONLY, FILTER_THEN_USE, or FULL_ACCESS
-# Read the file to check if .count is the only access (use fetchCount instead)
+# CLASSIFY: COUNT_ONLY (.count access → use fetchCount), FILTER_THEN_USE, or FULL_ACCESS (OK)
 Grep pattern="@Query\s+(private\s+)?var" glob="**/*.swift"
 
 # Main thread file I/O
@@ -160,346 +168,290 @@ Grep pattern="@Query\s+(private\s+)?var" glob="**/*.swift"
 # Only flag synchronous file I/O in view body, computed properties, or onAppear
 Grep pattern="(FileManager|Data\(contentsOf|String\(contentsOf)" glob="**/*View*.swift"
 
-# Synchronous network calls
-Grep pattern="\.dataTask\(.*\)\.resume\(\)" glob="**/*.swift"
-```
+# Missing [weak self] in closures
+# FALSE POSITIVE: SwiftUI struct views don't need weak self — only flag in classes
+Grep pattern="\{\s*\[(?!weak|unowned)" glob="**/*ViewModel*.swift"
+Grep pattern="\{\s*\[(?!weak|unowned)" glob="**/*Manager*.swift"
+Grep pattern="\{\s*\[(?!weak|unowned)" glob="**/*Service*.swift"
 
-### 4.4 Concurrency Patterns (Swift 6 Readiness)
-
-**NOTE:** These patterns produce CANDIDATES, not confirmed issues. Each hit MUST be verified
-by reading the file (see Step 5 Verification Rule). Common false positives are noted below.
-
-```bash
-# Sendable violations - mutable class without @unchecked
-Grep pattern="class.*(?<!@unchecked Sendable)" glob="**/*.swift"
-
-# Actor isolation issues
-# FALSE POSITIVE: nonisolated on UIKit delegate protocol methods is REQUIRED, not a violation
-Grep pattern="nonisolated.*func.*async" glob="**/*.swift"
-
-# Task without explicit priority
-# FALSE POSITIVE: Task {} in @MainActor view body inherits isolation — this is normal SwiftUI
-# Only flag Task {} in non-isolated contexts or where priority matters for background work
-Grep pattern="Task\s*\{" glob="**/*.swift"
-
-# Missing @MainActor on ViewModel
-Grep pattern="(class|struct).*ViewModel(?!.*@MainActor)" glob="**/*ViewModel.swift"
-
-# Dispatch to main thread (legacy pattern)
-# CLASSIFY EACH HIT: animation delay (asyncAfter) vs state update (async) vs layout workaround
-# Only state updates without asyncAfter are true migration candidates
-Grep pattern="DispatchQueue\.main\.(async|sync)" glob="**/*.swift"
-```
-
-### 4.5 Accessibility Patterns
-
-```bash
-# Missing accessibility labels on buttons/images
-Grep pattern="Button\(.*\)\s*\{" glob="**/*.swift"
-Grep pattern="Image\(" glob="**/*.swift"
-
-# Check for accessibilityLabel usage
-Grep pattern="\.accessibilityLabel" glob="**/*.swift" output_mode="count"
-
-# Check for accessibilityIdentifier (UI testing)
-Grep pattern="\.accessibilityIdentifier" glob="**/*.swift" output_mode="count"
-
-# Dynamic Type support
-Grep pattern="\.font\(\.system\(size:" glob="**/*.swift"
-```
-
-### 4.6 Testing Patterns
-
-```bash
-# Test file count
-Glob pattern="**/*Tests.swift"
-Glob pattern="**/*Test.swift"
-
-# Swift Testing vs XCTest usage
-Grep pattern="import Testing" glob="**/*Test*.swift" output_mode="count"
-Grep pattern="import XCTest" glob="**/*Test*.swift" output_mode="count"
-
-# Async test support
-Grep pattern="@Test.*async" glob="**/*Test*.swift" output_mode="count"
-
-# UI test coverage
-Glob pattern="**/*UITests*.swift"
-```
-
-### 4.7 Energy Patterns
-
-```bash
 # Timer usage (potential battery drain)
 Grep pattern="Timer\.(scheduledTimer|publish)" glob="**/*.swift"
 
 # Continuous location
 Grep pattern="startUpdatingLocation" glob="**/*.swift"
+```
 
-# Background tasks
-Grep pattern="BGTaskScheduler" glob="**/*.swift"
+### 4.5 Concurrency (Swift 6 Readiness)
 
-# Polling patterns
-Grep pattern="(while.*true|repeat.*while)" glob="**/*.swift"
+**NOTE:** Each hit MUST be verified by reading the file. See Verification Rule below.
+
+```bash
+# Missing @MainActor on ViewModel
+Grep pattern="(class|struct).*ViewModel(?!.*@MainActor)" glob="**/*ViewModel.swift"
+
+# Dispatch to main thread (legacy pattern)
+# CLASSIFY: animation delay (asyncAfter) vs state update (async) vs layout workaround
+# Only state updates without asyncAfter are true migration candidates
+Grep pattern="DispatchQueue\.main\.(async|sync)" glob="**/*.swift"
+
+# Actor isolation issues
+# FALSE POSITIVE: nonisolated on UIKit delegate protocol methods is REQUIRED
+Grep pattern="nonisolated.*func" glob="**/*.swift"
+```
+
+### 4.6 Accessibility
+
+```bash
+# Fixed font sizes (breaks Dynamic Type)
+Grep pattern="\.font\(\.system\(size:" glob="**/*.swift"
+
+# Check for accessibilityLabel coverage
+Grep pattern="\.accessibilityLabel" glob="**/*.swift" output_mode="count"
+
+# Check for accessibilityIdentifier (UI testing support)
+Grep pattern="\.accessibilityIdentifier" glob="**/*.swift" output_mode="count"
+
+# Images that may need accessibility descriptions
+# Read flagged files — decorative images should use .accessibilityHidden(true)
+Grep pattern="Image\(systemName:" glob="**/*.swift"
+Grep pattern="Image\(\"" glob="**/*.swift"
+```
+
+### 4.7 Testing
+
+```bash
+# Test file inventory
+Glob pattern="**/*Tests.swift"
+Glob pattern="**/*Test.swift"
+Glob pattern="**/*UITests*.swift"
+
+# Framework usage
+Grep pattern="import Testing" glob="**/*Test*.swift" output_mode="count"
+Grep pattern="import XCTest" glob="**/*Test*.swift" output_mode="count"
+
+# Async test support
+Grep pattern="@Test.*async" glob="**/*Test*.swift" output_mode="count"
+```
+
+### 4.8 UI/UX Patterns
+
+```bash
+# Deprecated APIs
+Grep pattern="@available.*deprecated" glob="**/*.swift"
+Grep pattern="UIApplication\.shared\.open" glob="**/*.swift"
+
+# Missing loading/error states — views with async calls but no loading indicator
+Grep pattern="\.task\s*\{" glob="**/*View*.swift"
+
+# Platform conditionals — check for consistent behavior
+Grep pattern="#if.*os\(" glob="**/*.swift"
+```
+
+### 4.9 Data & Persistence
+
+```bash
+# SwiftData models
+Grep pattern="@Model" glob="**/*.swift"
+
+# Migration support
+Grep pattern="VersionedSchema" glob="**/*.swift"
+Grep pattern="SchemaMigrationPlan" glob="**/*.swift"
+
+# Core Data usage (legacy check)
+Grep pattern="NSManagedObject|NSPersistentContainer" glob="**/*.swift"
+
+# UserDefaults for non-trivial data (should use proper persistence)
+Grep pattern="UserDefaults\.standard\.(set|object)" glob="**/*.swift"
 ```
 
 ---
 
-## Step 5: Analysis Mode Execution
+## Step 5: Verification Rule (CRITICAL)
 
-Based on the user's "Mode" selection:
-
-**Fast (parallel):** Launch Task agents simultaneously with `subagent_type: Explore`:
-
-| Agent | Focus | Axiom Skills to Reference |
-|-------|-------|---------------------------|
-| Architecture | Patterns, modularity, dependencies | `axiom-swiftui-architecture`, `axiom-app-composition` |
-| Security | Auth, storage, network, secrets | (your `/security-audit`) |
-| Performance | Memory, CPU, launch, SwiftUI | `axiom-ios-performance`, `axiom-swift-performance`, `axiom-swiftui-performance` |
-| Concurrency | Swift 6, actors, Sendable | `axiom-ios-concurrency`, `axiom-swift-concurrency` |
-| Testing | Coverage, framework, stability | `axiom-ios-testing`, `axiom-swift-testing` |
-
-**Quiet (sequential):** Use direct `Read`, `Glob`, `Grep` tools in sequence, referencing Axiom skill patterns where relevant.
-
-### Verification Rule (CRITICAL)
-
-Grep patterns produce candidates, NOT confirmed issues. Before reporting ANY finding as an issue:
+Grep patterns produce CANDIDATES, not confirmed issues. Before reporting ANY finding:
 
 1. **Read the flagged file** — at minimum 20 lines of context around the match
-2. **Check structural context** — a pattern inside a nested closure may be safe depending on the outer scope (e.g., `ModelContext` used inside `Task {}` that inherits `@MainActor` is safe even if `Task.detached` appears nearby)
-3. **Classify before reporting** — label each grep hit as CONFIRMED, FALSE_POSITIVE, or INTENTIONAL before including it in findings
-4. **Never report grep counts as issue counts** — e.g., "60 DispatchQueue.main calls" is a grep count; the real issue count requires classifying each call (animation delay vs state update vs layout workaround)
+2. **Check structural context** — a pattern inside a nested closure may be safe depending on the outer scope
+3. **Classify before reporting** — label each hit as CONFIRMED, FALSE_POSITIVE, or INTENTIONAL
+4. **Never report grep counts as issue counts** — e.g., "60 DispatchQueue.main calls" is a grep count; the real issue count requires classifying each call
 
-**Common false positive patterns to watch for:**
+**Common false positives:**
 - `Task {}` inside `@MainActor` class/view body → inherits isolation, safe
-- `DispatchQueue.main.asyncAfter` with comment about animation/layout → intentional
-- `ModelContext` captured by outer `Task {}` while `Task.detached` only captures Sendable values → safe, not a cross-isolation violation
-- `nonisolated` on protocol requirement methods (UIKit delegates) → required by protocol, not a choice
-- `http://` in XML namespace URIs or protocol-detection logic → not a real HTTP endpoint
+- `DispatchQueue.main.asyncAfter` for animation/layout → intentional
+- `nonisolated` on protocol requirement methods → required by protocol
+- `http://` in XML namespace URIs → not a real HTTP endpoint
+- `as!` after `guard let` or `is` check → already validated
+- `try?` in optional chaining for expected-nil paths → intentional
 
 ---
 
-## Step 6: Grading Criteria
+## Step 6: Grading
 
 ### Grade Scale
 
-| Grade | Meaning | Criteria |
-|-------|---------|----------|
-| A | Excellent | Best practices followed, minimal issues |
-| B | Good | Solid implementation, minor improvements needed |
-| C | Adequate | Functional but has notable gaps |
-| D | Poor | Significant issues requiring attention |
-| F | Failing | Critical problems, not production-ready |
+| Grade | Meaning | Guideline |
+|-------|---------|-----------|
+| A | Excellent | Best practices, minimal issues. 0-1 confirmed findings. |
+| B | Good | Solid, minor gaps. 2-4 low/medium findings. |
+| C | Adequate | Functional but notable gaps. Multiple medium findings or 1+ high. |
+| D | Poor | Significant issues. Multiple high findings. |
+| F | Failing | Critical problems, not production-ready. |
+
+Use +/- modifiers (e.g., B+, C-) for granularity. Convert to points: A=4, B=3, C=2, D=1, F=0 (with +/- as ±0.3).
 
 ### Category Weights
 
-| Category | Weight | Axiom Deep-Dive |
+| Category | Weight | What to Evaluate |
 |----------|--------|-----------------|
-| Architecture | 15% | `axiom-swiftui-architecture` |
-| Code Quality | 10% | — |
-| Performance | 15% | `axiom-ios-performance` |
-| Concurrency | 10% | `axiom-ios-concurrency` |
-| Security | 15% | `/security-audit` |
-| Accessibility | 10% | `axiom-ios-accessibility` |
-| Testing | 15% | `axiom-ios-testing` |
-| UI/UX | 5% | `axiom-ios-ui`, `axiom-hig` |
-| Data/Persistence | 5% | `axiom-ios-data` |
+| Architecture | 15% | Separation of concerns, file sizes, module boundaries, dependency direction |
+| Code Quality | 10% | Force unwraps, force casts, error swallowing, TODO density, naming |
+| Performance | 15% | Main-thread blocking, @Query efficiency, memory patterns, energy |
+| Concurrency | 10% | @MainActor coverage, DispatchQueue legacy, Swift 6 readiness |
+| Security | 15% | Hardcoded secrets, storage safety, network security, logging |
+| Accessibility | 10% | Dynamic Type, VoiceOver labels, accessibility identifiers |
+| Testing | 15% | Coverage breadth, framework choice, async test support |
+| UI/UX | 5% | Deprecated APIs, loading/error states, platform parity |
+| Data/Persistence | 5% | Schema migrations, model design, storage choices |
+
+### Overall Grade Calculation
+
+Multiply each category's point value by its weight, sum, and convert back:
+
+```
+Overall = (Arch × 0.15) + (Quality × 0.10) + (Perf × 0.15) + (Concurrency × 0.10)
+        + (Security × 0.15) + (A11y × 0.10) + (Testing × 0.15) + (UI × 0.05) + (Data × 0.05)
+```
+
+Convert: 3.7+ = A-, 3.3-3.69 = B+, 3.0-3.29 = B, 2.7-2.99 = B-, etc.
+
+### Timeline Adjustment
+
+- **Pre-release:** Double-weight Security and Performance findings
+- **Post-release:** Standard weights
+- **Planning:** Double-weight Architecture and Testing findings
 
 ---
 
 ## Step 7: Output Format
 
-### CLAUDE.md Summary (if included)
-- Bullet 1
-- Bullet 2
-- Bullet 3
+Structure the report as follows. Write to `.agents/research/YYYY-MM-DD-tech-reportcard.md`.
 
-*If CLAUDE.md was ignored, display instead:*
-> **Note:** CLAUDE.md was excluded from this analysis per user request.
+### 1. Executive Summary (2-3 sentences)
 
-### Project Metrics
+A narrative overview a developer can read in 10 seconds. Example:
+> This codebase has clean architecture and strong security practices but carries significant concurrency debt ahead of Swift 6. Testing coverage is the biggest gap — only ViewModels have tests. Accessibility needs attention before App Store submission.
 
-```
-**Swift Files:** 142 | **LOC:** ~28k | **Architecture:** MVVM | **Persistence:** SwiftData
-**Unit Tests:** 47 | **UI Tests:** 12 | **Test Framework:** Swift Testing
-```
+### 2. CLAUDE.md Summary (if included)
 
-### Grade Summary Line
+3-5 bullet points from CLAUDE.md. If excluded, note: "CLAUDE.md was excluded per user request."
+
+### 3. Project Metrics
 
 ```
-**Overall: B+** (Arch A- | Quality B+ | Perf B | Concurrency B- | Security A | A11y C+ | Testing C+ | UI B+ | Data B)
+Swift Files: 142 | LOC: ~28k | Architecture: MVVM | Persistence: SwiftData
+Unit Tests: 47 | UI Tests: 12 | Test Framework: Swift Testing
 ```
 
-### Trend Comparison (if previous report exists)
+### 4. Grade Summary Line
 
 ```
-**vs Previous (2024-01-15):**
-- Architecture: B+ → A- (↑)
-- Testing: C → C+ (↑)
-- Concurrency: C+ → B- (↑)
-- Security: A → A (→)
+Overall: B+ (Arch A- | Quality B+ | Perf B | Concurrency B- | Security A | A11y C+ | Testing C+ | UI B+ | Data B)
 ```
 
-### Grades with Technical Details
+### 5. Trend Comparison (if previous report exists)
 
-Present each category with grade and technical findings:
+```
+vs Previous (YYYY-MM-DD):
+  Architecture: B+ → A- (↑) | Testing: C → C+ (↑) | Security: A → A (→)
+```
 
-```markdown
+### 6. Per-Category Grades
+
+For each category, provide:
+- **Grade** and 1-sentence summary
+- **Strengths** — what's done well (bullet list)
+- **Findings** — confirmed issues only (NOT grep counts)
+
+Example:
+```
 ### Architecture: A-
 Clean MVVM with proper separation of concerns.
-- ViewModels use `@MainActor` correctly for SwiftData access
+
+**Strengths:**
+- ViewModels use @MainActor correctly for SwiftData access
 - Dependency injection via protocols enables testability
-- **[MED]** `ItemListViewModel.swift` (892 lines) exceeds 500-line threshold
 
-**Axiom reference:** For refactoring patterns, see `axiom-swiftui-architecture`
-
-### Concurrency: B-
-Partial Swift 6 readiness with some legacy patterns.
-- **[HIGH]** 12 ViewModels missing `@MainActor` annotation
-- **[MED]** 8 uses of `DispatchQueue.main.async` should migrate to `@MainActor`
-- `Sendable` conformance added to data transfer types
-
-**Axiom reference:** For Swift 6 migration, see `axiom-ios-concurrency`
-
-### Accessibility: C+
-Basic support present, gaps in key areas.
-- **[HIGH]** 23 Button views missing `.accessibilityLabel`
-- **[MED]** 8 Image views missing accessibility descriptions
-- Dynamic Type supported in 70% of text views
-- VoiceOver tested on main flows
-
-**Axiom reference:** For WCAG compliance, see `axiom-ios-accessibility`
+**Findings:**
+- ItemListViewModel.swift (892 lines) exceeds 500-line threshold
+- 2 circular import patterns between Managers/ and Views/
 ```
 
-### Technical Debt Summary
+### 7. Issue Rating Table
 
-```markdown
-### Technical Debt
+Consolidate ALL findings into a single Issue Rating Table, sorted by urgency descending then ROI:
 
-| Severity | Count | Top Issues |
-|----------|-------|------------|
-| **[HIGH]** | 3 | Missing @MainActor, God class, No error handling |
-| **[MED]** | 8 | Deprecated APIs, Missing accessibility, Legacy concurrency |
-| **[LOW]** | 12 | Code style, Documentation gaps |
+```
+| # | Finding | Urgency | Risk: Fix | Risk: No Fix | ROI | Blast Radius | Fix Effort |
+|---|---------|---------|-----------|-------------|-----|-------------|------------|
+| 1 | ... | 🔴 Critical | ... | ... | ... | ... | ... |
+| 2 | ... | 🟡 High | ... | ... | ... | ... | ... |
 ```
 
-### Prioritized Issues
+Use the Issue Rating scale:
+- **Urgency:** 🔴 CRITICAL (pre-launch blocker/crash risk) · 🟡 HIGH (fix before release) · 🟢 MEDIUM (schedule it) · ⚪ LOW (nice-to-have)
+- **Risk Fix/No Fix:** 🔴 Critical · 🟡 High · 🟢 Medium · ⚪ Low
+- **ROI:** 🟠 Excellent · 🟢 Good · 🟡 Marginal · 🔴 Poor
+- **Blast Radius:** 🔴 Critical · 🟡 High · 🟢 Medium · ⚪ Low
+- **Fix Effort:** Trivial / Small / Medium / Large
 
-```markdown
-### Prioritized Issues
+### 8. Next Steps
 
-**1. Add @MainActor to ViewModels** — Urgency: High | Risk: Med | ROI: High | Blast: 12 files
-   Swift 6 will require this. Add `@MainActor` to all ViewModels accessing UI state.
+Group by timeline:
 
-**2. ItemListViewModel refactor** — Urgency: High | Risk: Med | ROI: High | Blast: 8 files
-   Split into ItemListViewModel, SearchViewModel, FilterViewModel
-
-**3. Accessibility labels** — Urgency: Med | Risk: Low | ROI: High | Blast: 15 files
-   Add `.accessibilityLabel()` to all interactive elements
 ```
+Immediate (This Week):
+- [Finding #1] — one-line rationale
 
-### Next Steps
+Short-term (This Month):
+- [Finding #3] — one-line rationale
 
-```markdown
-### Immediate (This Week)
-- **Add @MainActor to ViewModels** — Prevents Swift 6 migration pain
-- **Fix accessibility labels** — App Store may reject for accessibility gaps
-
-### Short-term (This Month)
-- **Refactor ItemListViewModel** — Split into focused ViewModels under 400 lines
-- **Migrate DispatchQueue to async/await** — Modern concurrency patterns
-
-### Medium-term (This Quarter)
-- **Performance profiling** — Add signposts and run Time Profiler
-- **Increase test coverage** — Target 80% for ViewModels
+Medium-term (This Quarter):
+- [Finding #5] — one-line rationale
 ```
 
 ---
 
-## Step 8: Deep Dive Option
+## Step 8: Follow-up
 
-After presenting the report, offer category-specific deep dives:
-
-> **Note:** Deep dives require [Axiom](https://github.com/CharlesWiltgen/Axiom) to be installed. If Axiom is not available, skip this step or inform the user they can install Axiom for deeper analysis.
+After presenting the report, ask:
 
 ```
 AskUserQuestion with questions:
 [
   {
-    "question": "Would you like a deep dive into any category?",
-    "header": "Deep Dive",
+    "question": "What would you like to do next?",
+    "header": "Next",
     "options": [
-      {"label": "Performance deep dive", "description": "Requires Axiom - Instruments workflows and profiling guidance"},
-      {"label": "Concurrency audit", "description": "Requires Axiom - Swift 6 compliance and actor isolation"},
-      {"label": "Accessibility audit", "description": "Requires Axiom - WCAG compliance and VoiceOver testing"},
-      {"label": "Memory leak check", "description": "Requires Axiom - retain cycle detection with Instruments"},
-      {"label": "No deep dive needed", "description": "The overview is sufficient"}
-    ],
-    "multiSelect": true
-  }
-]
-```
-
-If user selects a deep dive:
-- **Performance:** Invoke `axiom-ios-performance`
-- **Concurrency:** Invoke `axiom-ios-concurrency`
-- **Accessibility:** Invoke `axiom-ios-accessibility`
-- **Memory:** Invoke `axiom-memory-debugging`
-
-If Axiom is not installed, inform the user:
-> Axiom is not installed. Install it with: `claude plugin install CharlesWiltgen/Axiom`
-
----
-
-## Step 9: Follow-up Question
-
-After deep dives (or if skipped), ask about implementation:
-
-```
-AskUserQuestion with questions:
-[
-  {
-    "question": "Would you like me to create an implementation plan?",
-    "header": "Next Steps",
-    "options": [
-      {"label": "Yes, plan immediate items", "description": "Detailed plan for high-priority actions"},
-      {"label": "Yes, plan all items", "description": "Comprehensive implementation roadmap"},
-      {"label": "No, report is sufficient", "description": "End here"}
+      {"label": "Fix critical issues now", "description": "Walk through each critical/high issue with code fixes"},
+      {"label": "Create implementation plan", "description": "Generate a prioritized plan from the findings"},
+      {"label": "Report is sufficient", "description": "End here — report saved to .agents/research/"}
     ],
     "multiSelect": false
   }
 ]
 ```
 
-If user selects yes, invoke `/plan` with the selected items.
+If "Fix critical issues now": Walk through each 🔴/🟡 finding, show the problematic code, propose a fix, and apply after user approval.
+
+If "Create implementation plan": Group findings into phases and present as a structured plan.
 
 ---
 
-## Output
+## Troubleshooting
 
-Write the report card to `.agents/research/YYYY-MM-DD-tech-reportcard.md` for future reference.
-
----
-
-## Axiom Integration Reference
-
-| Category | Axiom Skills | When to Invoke |
-|----------|--------------|----------------|
-| Architecture | `axiom-swiftui-architecture`, `axiom-app-composition` | Refactoring recommendations |
-| Performance | `axiom-ios-performance`, `axiom-swift-performance`, `axiom-swiftui-performance` | Deep dive requested |
-| Concurrency | `axiom-ios-concurrency`, `axiom-swift-concurrency` | Swift 6 migration |
-| Memory | `axiom-memory-debugging` | Leak detection |
-| Testing | `axiom-ios-testing`, `axiom-swift-testing` | Test framework guidance |
-| Accessibility | `axiom-ios-accessibility` | WCAG compliance audit |
-| Data | `axiom-ios-data`, `axiom-swiftdata` | Persistence patterns |
-| UI | `axiom-ios-ui`, `axiom-hig` | Design compliance |
-| Energy | `axiom-energy` | Battery drain issues |
-| Navigation | `axiom-swiftui-nav` | Deep linking, state restoration |
-
----
-
-## See Also
-
-- `/plain-talk-reportcard` - Non-technical version for stakeholders
-- `/performance-check` - Deeper performance analysis
-- `/security-audit` - Deeper security analysis
-- `/plan` - Create action plans from findings
+| Problem | Solution |
+|---------|----------|
+| Too many grep hits to verify | Narrow glob pattern (e.g., `**/*View*.swift` instead of `**/*.swift`) |
+| Category has no findings | Grade A — note "No issues detected" and list what was scanned |
+| Can't determine architecture pattern | Read the app entry point and 3-4 representative views to infer |
+| Previous report has different categories | Compare only matching categories in trend |
