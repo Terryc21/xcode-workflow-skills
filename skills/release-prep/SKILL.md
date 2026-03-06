@@ -151,9 +151,32 @@ Draft user-facing release notes (max 4000 characters):
 
 ### 5.1: Test Status
 
+Ask the user before running tests (they may take a while or require specific configuration):
+
+```
+AskUserQuestion with questions:
+[
+  {
+    "question": "Should I run the test suite now?",
+    "header": "Tests",
+    "options": [
+      {"label": "Yes, run tests", "description": "Run xcodebuild test (may take a few minutes)"},
+      {"label": "Skip tests", "description": "I'll run tests separately or they've already passed"},
+      {"label": "Check last results", "description": "Just check the most recent test outcome"}
+    ],
+    "multiSelect": false
+  }
+]
+```
+
+If running tests, determine the scheme and simulator:
+
 ```bash
-# Run tests (or check most recent results)
-xcodebuild test -scheme <AppName> -destination 'platform=iOS Simulator,name=iPhone 16' -quiet 2>&1 | tail -5
+# Find available schemes
+xcodebuild -list -json 2>/dev/null | head -30
+
+# Run tests — adjust scheme and destination for the project
+xcodebuild test -scheme <AppName> -destination 'platform=iOS Simulator,name=iPhone 16' -quiet 2>&1 | tail -10
 ```
 
 ### 5.2: Check for Debug Code Left Behind
@@ -162,6 +185,7 @@ xcodebuild test -scheme <AppName> -destination 'platform=iOS Simulator,name=iPho
 # Find debug prints — exclude those inside #if DEBUG (safe for release)
 Grep pattern="print\(|NSLog\(|debugPrint\(" glob="**/*.swift" output_mode="files_with_matches"
 # Read each flagged file to check if the print is behind #if DEBUG
+# Prints inside #if DEBUG blocks are safe — they're stripped from release builds
 
 # Find TODO/FIXME that might be release blockers
 # NOTE: not all TODOs are blockers — read each to assess urgency
@@ -174,8 +198,15 @@ Grep pattern="localhost|127\\.0\\.0\\.1|test@|example\\.com" glob="**/*.swift" o
 ### 5.3: Check for Warnings
 
 ```bash
-# Build and count warnings
+# Build and count warnings — adjust scheme and destination for the project
 xcodebuild build -scheme <AppName> -destination 'platform=iOS Simulator,name=iPhone 16' 2>&1 | grep "warning:" | wc -l
+```
+
+### 5.4: Deployment Target
+
+```bash
+# Verify minimum deployment target is intentional
+Grep pattern="IPHONEOS_DEPLOYMENT_TARGET" glob="**/*.pbxproj" output_mode="content"
 ```
 
 ---
@@ -220,11 +251,53 @@ Glob pattern="**/PrivacyInfo.xcprivacy"
 # Cross-reference with Package.resolved to identify SDKs missing manifests
 ```
 
+### 6.4: App Transport Security (ATS)
+
+```bash
+# Check for ATS exceptions — NSAllowsArbitraryLoads disables HTTPS enforcement
+Grep pattern="NSAllowsArbitraryLoads" glob="**/*.plist" output_mode="content"
+
+# Check for per-domain exceptions (more targeted, may be acceptable)
+Grep pattern="NSExceptionDomains" glob="**/*.plist" output_mode="content"
+```
+
+If `NSAllowsArbitraryLoads = true` is found, flag as a potential App Store blocker — Apple may reject apps with blanket ATS exceptions without justification.
+
+### 6.5: Entitlements Check
+
+```bash
+# Find entitlements files
+Glob pattern="**/*.entitlements"
+
+# If found, read contents and verify capabilities match what the app actually uses
+# Unused entitlements should be removed before submission
+```
+
 ---
 
 ## Step 7: App Store Metadata
 
-### 7.1: Screenshots
+### 7.1: App Icon
+
+```bash
+# Verify app icon asset exists and has all required sizes
+Glob pattern="**/AppIcon.appiconset/Contents.json"
+
+# If found, read the Contents.json to check for missing sizes
+# A complete icon set prevents App Store Connect rejection
+```
+
+### 7.2: Launch Screen
+
+```bash
+# Check for launch screen configuration (required for App Store)
+Grep pattern="UILaunchScreen|UILaunchStoryboardName" glob="**/*.plist" output_mode="content"
+
+# Or check for LaunchScreen storyboard
+Glob pattern="**/LaunchScreen.storyboard"
+```
+
+### 7.3: Screenshots
 
 ```bash
 # Check if screenshot assets exist
@@ -234,7 +307,7 @@ Glob pattern="**/Screenshots/**/*.jpg"
 
 Ask user: Are screenshots up to date with current UI?
 
-### 7.2: URLs
+### 7.4: URLs
 
 ```bash
 # Check for support URL in project settings
@@ -245,6 +318,19 @@ Remind user to verify:
 - [ ] Support URL is valid and loads
 - [ ] Privacy Policy URL is valid and loads
 - [ ] Marketing URL is valid (if applicable)
+
+### 7.5: Localization Completeness
+
+```bash
+# Find all localization directories
+Glob pattern="**/*.lproj"
+
+# Check for missing keys across localization files
+Glob pattern="**/*.lproj/Localizable.strings"
+Glob pattern="**/*.lproj/Localizable.xcstrings"
+
+# If multiple languages exist, verify key counts match across .lproj directories
+```
 
 ---
 
@@ -262,6 +348,17 @@ Grep pattern="CODE_SIGN_IDENTITY|DEVELOPMENT_TEAM|PROVISIONING_PROFILE" glob="**
 ```bash
 # Check optimization settings for Release
 Grep pattern="SWIFT_OPTIMIZATION_LEVEL|GCC_OPTIMIZATION_LEVEL" glob="**/*.pbxproj" output_mode="content"
+```
+
+### 8.3: Package Dependencies
+
+```bash
+# Check for Package.resolved — ensures reproducible builds
+Glob pattern="**/Package.resolved"
+
+# If found, read it to check for:
+# - Deprecated or archived packages (note the URLs for user review)
+# - Very old versions that may have known issues
 ```
 
 ---
@@ -305,6 +402,7 @@ Write report to `.agents/research/YYYY-MM-DD-release-prep-vX.Y.Z.md`:
 | Debug code removed | ✓ / ✗ | N non-DEBUG prints found |
 | No blocking TODOs | ✓ / ✗ | List if any |
 | Build warnings | ✓ / ✗ | N warnings |
+| Deployment target | ✓ | iOS X.Y |
 
 ## Privacy & Compliance
 
@@ -313,15 +411,20 @@ Write report to `.agents/research/YYYY-MM-DD-release-prep-vX.Y.Z.md`:
 | Privacy manifest exists | ✓ / ✗ | |
 | API reasons declared | ✓ / ✗ | |
 | Third-party manifests | ✓ / ✗ | |
+| ATS configured | ✓ / ✗ | |
+| Entitlements match | ✓ / ✗ | |
 
 ## App Store Metadata
 
 | Check | Status | Notes |
 |-------|--------|-------|
+| App icon complete | ✓ / ✗ | |
+| Launch screen exists | ✓ / ✗ | |
 | Screenshots current | ✓ / ✗ | |
 | What's New text | ✓ | See above |
 | Support URL valid | ✓ / ✗ | |
 | Privacy URL valid | ✓ / ✗ | |
+| Localizations complete | ✓ / ✗ / N/A | |
 
 ## Release Commands
 
@@ -374,3 +477,8 @@ AskUserQuestion with questions:
 | Privacy manifest missing | Flag as blocker — required for App Store since iOS 17 |
 | Tests fail | Flag as blocker — don't release with failing tests |
 | Print statements found | Read each — only flag prints NOT inside `#if DEBUG` blocks |
+| App icon missing sizes | Check `Contents.json` — modern Xcode uses a single 1024x1024 image |
+| NSAllowsArbitraryLoads = true | Flag as blocker — Apple requires justification for blanket ATS exceptions |
+| No launch screen | Flag as blocker — required for App Store submission |
+| Localization keys mismatch | Compare key counts across `.lproj` directories — missing keys show default language |
+| Can't determine scheme | Run `xcodebuild -list -json` to find available schemes |
