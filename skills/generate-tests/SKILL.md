@@ -1,10 +1,10 @@
 ---
 name: generate-tests
 description: 'Generate unit and UI tests for specified code with edge cases and mocks. Triggers: "generate tests", "write tests", "add tests", "test coverage".'
-version: 2.0.0
+version: 2.1.0
 author: Terry Nyberg
 license: MIT
-allowed-tools: [Read, Write, Glob, Grep, AskUserQuestion]
+allowed-tools: [Read, Write, Edit, Glob, Grep, Bash, AskUserQuestion]
 metadata:
   tier: execution
   category: testing
@@ -271,7 +271,20 @@ Write the generated tests to match the existing directory structure and naming c
 
 ---
 
-## Step 8: Present Summary
+## Step 8: Verify and Present Summary
+
+### 8.1: Run Tests
+
+```bash
+# Verify generated tests compile and pass
+xcodebuild test -scheme <SCHEME> -destination 'platform=iOS Simulator,name=iPhone 16' -only-testing:<TEST_TARGET> -quiet 2>&1 | tail -10
+```
+
+If tests fail, fix the issues before presenting results.
+
+### 8.2: Display Results
+
+**Display the summary inline** so the user sees results immediately:
 
 ```markdown
 ## Test Generation Complete
@@ -279,6 +292,7 @@ Write the generated tests to match the existing directory structure and naming c
 **Target:** ItemViewModel.swift
 **Framework:** Swift Testing
 **Tests Generated:** N
+**Status:** All passing ✓
 
 | Test Type | Count | File |
 |-----------|-------|------|
@@ -290,11 +304,6 @@ Write the generated tests to match the existing directory structure and naming c
 - Fetch operations: 3 tests
 - Error handling: 2 tests
 - Edge cases: 3 tests
-
-**Next Steps:**
-1. Run tests to verify: Cmd+U or `xcodebuild test`
-2. Review generated mocks for completeness
-3. Add additional edge cases as needed
 ```
 
 ---

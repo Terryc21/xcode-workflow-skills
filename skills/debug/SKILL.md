@@ -1,10 +1,10 @@
 ---
 name: debug
 description: 'Systematic debugging workflow: reproduce, isolate, hypothesize, verify, fix. Triggers: "debug", "find bug", "fix crash", "why is this broken", "not working".'
-version: 2.0.0
+version: 2.1.0
 author: Terry Nyberg
 license: MIT
-allowed-tools: [Read, Grep, Glob, Bash, Edit, Write, AskUserQuestion]
+allowed-tools: [Read, Grep, Glob, Bash, Edit, Write, LSP, AskUserQuestion]
 metadata:
   tier: execution
   category: debugging
@@ -58,13 +58,13 @@ If the bug started recently, look at what changed:
 
 ```bash
 # Recent commits touching Swift files
-git log --oneline -10 -- "**/*.swift"
+git log --oneline -10 -- '*.swift'
 
 # Files changed in last N commits
 git diff --name-only HEAD~5
 
 # Full diff of recent changes
-git diff HEAD~3 -- "**/*.swift"
+git diff HEAD~3 -- '*.swift'
 ```
 
 ### 2.2: Search for Error Messages
@@ -103,8 +103,11 @@ Grep pattern="<symptom_function_or_action>" glob="**/*.swift"
 # Read the view/controller involved
 Read file_path="<path_to_affected_file>"
 
-# Trace function calls from the entry point
-# Read each file along the call chain
+# Trace function calls — use LSP when available for accurate resolution
+LSP operation="goToDefinition" filePath="<file>" line=<N> character=<N>
+LSP operation="findReferences" filePath="<file>" line=<N> character=<N>
+
+# Fallback: Read each file along the call chain manually
 ```
 
 ### 3.2: Check the Blast Radius
@@ -154,7 +157,7 @@ git log --oneline -5 -- "path/to/file.swift"
 git log -p -1 -- "path/to/file.swift"
 
 # Find when a specific pattern was introduced or removed
-git log -p -S "suspiciousCode" -- "**/*.swift"
+git log -p -S "suspiciousCode" -- '*.swift'
 ```
 
 ### 4.3: Search for Related Patterns
@@ -310,7 +313,7 @@ Or use `/scan-similar-bugs` for a more thorough scan.
 
 ## Step 10: Generate Report
 
-Write report to `.agents/research/YYYY-MM-DD-debug-{summary}.md`:
+**Display the investigation summary, root cause, and fix inline**, then write report to `.agents/research/YYYY-MM-DD-debug-{summary}.md`:
 
 ```markdown
 # Bug Investigation Report

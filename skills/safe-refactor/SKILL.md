@@ -1,10 +1,10 @@
 ---
 name: safe-refactor
 description: 'Plan refactoring with blast radius analysis, dependency mapping, and rollback strategy. Triggers: "refactor", "safe refactor", "restructure", "rename type", "extract protocol".'
-version: 2.0.0
+version: 2.1.0
 author: Terry Nyberg
 license: MIT
-allowed-tools: [Glob, Grep, Read, Bash, AskUserQuestion]
+allowed-tools: [Glob, Grep, Read, Bash, Edit, Write, LSP, AskUserQuestion]
 metadata:
   tier: analysis
   category: refactoring
@@ -12,7 +12,7 @@ metadata:
 
 # Safe Refactor
 
-> **Quick Ref:** Blast radius analysis → dependency mapping → step-by-step plan → verify after each step. Every commit compiles and passes tests.
+> **Quick Ref:** Blast radius analysis → dependency mapping → step-by-step plan → verify after each step. Every commit compiles and passes tests. Output: `.agents/research/YYYY-MM-DD-refactor-{target}.md`
 
 **YOU MUST EXECUTE THIS WORKFLOW. Do not just describe it.**
 
@@ -41,6 +41,13 @@ Collect:
 - **Target code** — What's being refactored
 - **Reason** — Tech debt, performance, readability, pattern change
 - **Desired end state** — How it should look after
+
+### Freshness
+
+Base all analysis on current source code only. Do not read or reference
+files in `.agents/`, `scratch/`, or prior audit reports. Every dependency
+and blast radius finding must come from scanning the actual codebase as it
+exists now.
 
 ---
 
@@ -87,6 +94,10 @@ Record:
 ### 2.2: Downstream Dependents (what imports/uses target)
 
 ```bash
+# Option A: LSP (most accurate — handles type inference, renames)
+LSP operation="findReferences" filePath="<target_file>" line=<N> character=<N>
+
+# Option B: Grep fallback
 # Find all files that reference the target type
 Grep pattern="TargetTypeName" glob="**/*.swift" output_mode="files_with_matches"
 
@@ -202,6 +213,42 @@ After each step:
 - **Small steps committed?** → `git revert <commit-hash>` for the broken step
 - **Not yet pushed?** → `git reset --hard <last-good-commit>`
 - **Parallel implementation?** → Delete new code, old code is untouched
+
+---
+
+## Phase 9: Generate Report
+
+**Display the refactoring plan and all findings inline**, then write to `.agents/research/YYYY-MM-DD-refactor-{target}.md`:
+
+```markdown
+# Refactoring Plan
+
+**Date:** YYYY-MM-DD
+**Target:** [type/file being refactored]
+**Strategy:** Incremental / Parallel / Big Bang
+
+## Blast Radius
+
+| Risk Level | Files | Description |
+|------------|-------|-------------|
+| Direct | 1 | Target file |
+| Immediate | N | Files that reference target |
+| Transitive | N | Files that reference immediate dependents |
+| **Total** | **N** | |
+
+## Step-by-Step Plan
+
+| Step | Change | Files | Commit Message |
+|------|--------|-------|----------------|
+| 1 | [change] | [files] | "message" |
+| 2 | [change] | [files] | "message" |
+
+## Status
+
+| Step | Build | Tests | Verified |
+|------|-------|-------|----------|
+| 1 | ✓ / ✗ | ✓ / ✗ | ✓ / ✗ |
+```
 
 ---
 

@@ -1,10 +1,10 @@
 ---
 name: performance-check
 description: 'Automated performance anti-pattern scan for iOS/macOS apps. Covers memory, CPU, energy, SwiftUI, launch time, and database. Triggers: "performance check", "performance scan", "check performance".'
-version: 2.0.0
+version: 2.1.0
 author: Terry Nyberg
 license: MIT
-allowed-tools: [Grep, Glob, Read, Write, AskUserQuestion]
+allowed-tools: [Grep, Glob, Read, Write, Bash, AskUserQuestion]
 metadata:
   tier: execution
   category: analysis
@@ -140,7 +140,9 @@ Grep pattern="Thread\.sleep" glob="**/*.swift"
 # Semaphore wait (potential deadlock)
 Grep pattern="\.wait\(\)" glob="**/*.swift"
 
-# Synchronous dispatch to main (deadlock risk)
+# Synchronous dispatch to main (DEADLOCK if called from main thread)
+# DispatchQueue.main.sync from main thread = guaranteed deadlock
+# DispatchQueue.main.sync from background thread = safe but legacy pattern
 Grep pattern="DispatchQueue\.main\.sync" glob="**/*.swift"
 
 # Heavy computation patterns — chained collection operations
@@ -197,6 +199,8 @@ Grep pattern="NumberFormatter\(\)" glob="**/*View*.swift"
 Grep pattern="JSONDecoder\(\)" glob="**/*View*.swift"
 
 # @State with reference types (won't trigger updates properly)
+# NOTE: @State with @Observable classes IS correct (iOS 17+)
+# Only flag @State with non-@Observable reference types (NS*, UI*, or plain classes)
 Grep pattern="@State\s+(private\s+)?var\s+\w+\s*:\s*(NS|UI)" glob="**/*.swift"
 
 # GeometryReader overuse (forces layout passes)
@@ -329,7 +333,7 @@ Convert: A=4, B=3, C=2, D=1, F=0 (with +/- as ±0.3). Multiply by weight, sum, c
 
 ## Step 5: Output
 
-Write report to `.agents/research/YYYY-MM-DD-performance-check.md`.
+**Display the executive summary, grade summary, issue table, and Instruments recommendations inline**, then write report to `.agents/research/YYYY-MM-DD-performance-check.md`.
 
 ### Report Structure
 

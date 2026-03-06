@@ -1,7 +1,7 @@
 ---
 name: release-prep
 description: 'Pre-release checklist: version bump, changelog, privacy manifest, store metadata, archive readiness. Triggers: "release prep", "prepare release", "ready to ship", "pre-release checklist".'
-version: 2.0.0
+version: 2.1.0
 author: Terry Nyberg
 license: MIT
 allowed-tools: [Read, Grep, Glob, Bash, Edit, Write, AskUserQuestion]
@@ -182,10 +182,11 @@ xcodebuild test -scheme <AppName> -destination 'platform=iOS Simulator,name=iPho
 ### 5.2: Check for Debug Code Left Behind
 
 ```bash
-# Find debug prints — exclude those inside #if DEBUG (safe for release)
+# Pass 1: Find all debug prints
 Grep pattern="print\(|NSLog\(|debugPrint\(" glob="**/*.swift" output_mode="files_with_matches"
-# Read each flagged file to check if the print is behind #if DEBUG
-# Prints inside #if DEBUG blocks are safe — they're stripped from release builds
+# Pass 2: For each flagged file, read it and check if prints are inside #if DEBUG
+# Prints inside #if DEBUG blocks are SAFE — they're stripped from release builds
+# Only report prints that are NOT behind #if DEBUG as issues
 
 # Find TODO/FIXME that might be release blockers
 # NOTE: not all TODOs are blockers — read each to assess urgency
@@ -234,7 +235,7 @@ Grep pattern="creationDate|modificationDate|fileModificationDate" glob="**/*.swi
 # Disk space APIs
 Grep pattern="volumeAvailableCapacity|systemFreeSize" glob="**/*.swift"
 
-# User defaults APIs
+# User defaults APIs — if >0, requires NSPrivacyAccessedAPICategoryUserDefaults in privacy manifest
 Grep pattern="UserDefaults" glob="**/*.swift" output_mode="count"
 
 # System boot time APIs
@@ -303,6 +304,12 @@ Glob pattern="**/LaunchScreen.storyboard"
 # Check if screenshot assets exist
 Glob pattern="**/Screenshots/**/*.png"
 Glob pattern="**/Screenshots/**/*.jpg"
+
+# If found, verify dimensions match App Store requirements
+# Required: 6.9" (1320x2868), 6.5" (1242x2688), 5.5" (1242x2208)
+for f in $(find . -path "*/Screenshots/*.png" -o -path "*/Screenshots/*.jpg" 2>/dev/null); do
+  sips -g pixelWidth -g pixelHeight "$f" 2>/dev/null
+done
 ```
 
 Ask user: Are screenshots up to date with current UI?
@@ -365,7 +372,7 @@ Glob pattern="**/Package.resolved"
 
 ## Step 9: Generate Report
 
-Write report to `.agents/research/YYYY-MM-DD-release-prep-vX.Y.Z.md`:
+**Display the full checklist, changelog, code readiness, privacy status, and metadata summary inline**, then write report to `.agents/research/YYYY-MM-DD-release-prep-vX.Y.Z.md`:
 
 ```markdown
 # Release Prep Report — vX.Y.Z

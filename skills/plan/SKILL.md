@@ -1,7 +1,7 @@
 ---
 name: plan
 description: Epic decomposition into trackable, right-sized tasks. Audit-aware mode ingests codebase-audit/tech-reportcard reports. Standalone mode plans features, bugs, and refactors from scratch.
-version: 1.1.0
+version: 1.2.0
 author: Terry Nyberg
 license: MIT
 allowed-tools: [Glob, Grep, Read, Write, AskUserQuestion]
@@ -42,8 +42,8 @@ Glob pattern=".agents/research/*-tech-reportcard.md"
 
 | Condition | Mode |
 |-----------|------|
-| `--audit` flag passed | Audit-aware (error if no report found) |
-| `--standalone` flag passed | Standalone (ignore reports) |
+| User specifies audit mode | Audit-aware (error if no report found) |
+| User specifies standalone mode | Standalone (ignore reports) |
 | Report found AND <14 days old | Audit-aware |
 | Report found AND ≥14 days old | Standalone (warn: "Stale audit report found — run `/codebase-audit` for fresh data") |
 | No report found | Standalone |
@@ -139,6 +139,13 @@ Scan the report for the prioritized findings list. Each finding should have:
 ## Step 2B: Codebase Analysis (standalone mode only)
 
 > Skip this step in audit-aware mode — audit already did this work.
+
+### Freshness
+
+Base all analysis on current source code only. Do not read or reference
+files in `.agents/`, `scratch/`, or prior audit reports (those are ingested
+in Step 2A only). Every finding must come from scanning the actual codebase
+as it exists now.
 
 Scan the codebase for context relevant to the planned work:
 
@@ -420,7 +427,7 @@ Per-phase rollback ensures each phase can be independently reverted if needed.
 
 ## Step 11: Write Output
 
-Write the complete plan to `.agents/research/` for future reference:
+**Display the full implementation plan inline** (mode, digest/analysis, feature spec, sizing, impact, phased plan, risks, test plan, rollback), then write to `.agents/research/` for future reference:
 
 ```
 Write file_path=".agents/research/YYYY-MM-DD-implementation-plan.md" content="[full plan output]"
@@ -487,6 +494,19 @@ Step 10: Rollback — Revert .searchable modifier, remove filter computed proper
 Step 11: Written to .agents/research/2026-02-25-implementation-plan.md
 Step 12: Ready to proceed?
 ```
+
+## Troubleshooting
+
+| Problem | Solution |
+|---------|----------|
+| Can't find audit report | Check `.agents/research/` for `*-codebase-audit.md` or `*-tech-reportcard.md` |
+| Report is stale (>14 days) | Run `/codebase-audit` or `/tech-talk-reportcard` first, then re-plan |
+| Too many findings to plan | Use "Blockers only" or "Top 10 issues" scope to focus |
+| Tasks too large (L-sized) | Split along natural boundaries: model/view/test, or by sub-feature |
+| Dependencies between phases unclear | Draw the dependency chain from data model → service → viewmodel → view |
+| User unclear on scope | Use standalone mode with AskUserQuestion to clarify iteratively |
+
+---
 
 ## Worked Example: Audit-Aware Mode (Abbreviated)
 

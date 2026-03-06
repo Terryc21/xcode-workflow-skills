@@ -1,10 +1,10 @@
 ---
 name: dead-code-scanner
 description: 'Find unused code after refactors or as ongoing hygiene. Two modes: quick (post-refactor, recent changes) and full (entire codebase). Triggers: "find dead code", "find unused code", "cleanup unused", "dead code scan", "code hygiene".'
-version: 2.0.0
+version: 2.1.0
 author: Terry Nyberg
 license: MIT
-allowed-tools: [Grep, Glob, Read, Bash, Write, AskUserQuestion]
+allowed-tools: [Grep, Glob, Read, Bash, LSP, Write, AskUserQuestion]
 metadata:
   tier: execution
   category: analysis
@@ -103,10 +103,13 @@ Build a symbol table from the results:
 
 ## Step 4: Scan for References
 
-For each symbol in the table, search for usage:
+For each symbol in the table, search for usage. Prefer LSP when available:
 
 ```bash
-# Search for the symbol name across all Swift files
+# Option A: LSP (most accurate — handles type inference, protocol witnesses)
+LSP operation="findReferences" filePath="path/to/file.swift" line=45 character=12
+
+# Option B: Grep fallback (when LSP is unavailable)
 Grep pattern="\bsymbolName\b" glob="**/*.swift" output_mode="content"
 ```
 
@@ -165,7 +168,15 @@ Also check for string-based invocation:
 Grep pattern="#selector|NSSelectorFromString|perform\(Selector" glob="**/*.swift" output_mode="content"
 ```
 
-Also check if a method satisfies a protocol requirement — protocol-required methods are not "unused" even if never called directly.
+Also check if a method satisfies a protocol requirement — protocol-required methods are not "unused" even if never called directly:
+
+```bash
+# Check if the type conforms to a protocol that requires this method
+Grep pattern=":\s*\w+Protocol|:\s*\w+Delegate|:\s*\w+DataSource" path="<file_with_symbol>" output_mode="content"
+
+# Or use LSP to find protocol implementations
+LSP operation="goToImplementation" filePath="path/to/file.swift" line=45 character=12
+```
 
 ---
 
@@ -182,7 +193,7 @@ Before reporting ANY finding:
 
 ## Step 7: Generate Report
 
-Write report to `.agents/research/YYYY-MM-DD-dead-code-{mode}.md`:
+**Display the summary table and all findings inline**, then write to `.agents/research/YYYY-MM-DD-dead-code-{mode}.md`:
 
 ```markdown
 # Dead Code Scan Report
