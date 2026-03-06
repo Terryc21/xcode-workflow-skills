@@ -38,6 +38,13 @@ Use the AskUserQuestion tool with these options:
 - **Option 1: "Let me describe the bug pattern"** - User will provide description, then choose to proceed, clarify, edit, or cancel
 - **Option 2: "Scan for the bug I just fixed"** - Infer from recent edits in this session
 
+### Freshness
+
+Base all findings on current source code only. Do not read or reference
+files in `.agents/`, `scratch/`, or prior audit reports. Ignore cached
+findings from auto-memory or previous sessions. Every finding must come
+from scanning the actual codebase as it exists now.
+
 ---
 
 ## Step 2A: If User Describes the Bug

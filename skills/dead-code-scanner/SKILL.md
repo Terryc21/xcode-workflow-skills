@@ -73,6 +73,13 @@ How far back should I look?
 4. Since specific commit (I'll provide hash)
 ```
 
+### Freshness
+
+Base all findings on current source code only. Do not read or reference
+files in `.agents/`, `scratch/`, or prior audit reports. Ignore cached
+findings from auto-memory or previous sessions. Every finding must come
+from scanning the actual codebase as it exists now.
+
 ---
 
 ## Step 2: Check for Configuration Files

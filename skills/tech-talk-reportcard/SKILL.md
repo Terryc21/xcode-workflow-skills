@@ -73,6 +73,13 @@ AskUserQuestion with questions:
 
 **If user selects "No":** Skip reading CLAUDE.md entirely. Note in the report that CLAUDE.md was intentionally excluded.
 
+### Freshness
+
+Base all findings on current source code only. Do not read or reference
+files in `.agents/`, `scratch/`, or prior audit reports. Ignore cached
+findings from auto-memory or previous sessions. Every finding must come
+from scanning the actual codebase as it exists now.
+
 ---
 
 ## Step 2: Check for Previous Reports
@@ -136,14 +143,21 @@ Grep pattern="(print|NSLog|os_log|Logger).*\((password|token|secret|key)" glob="
 
 ### 4.3 Performance Patterns
 
+**NOTE:** These patterns produce CANDIDATES, not confirmed issues. Verify each by reading the file.
+
 ```bash
 # Missing [weak self] in closures
+# FALSE POSITIVE: SwiftUI struct views don't need weak self — only flag classes
 Grep pattern="\{\s*\[(?!weak|unowned)" glob="**/*.swift"
 
 # @Query without predicate (full table scans)
+# CLASSIFY EACH HIT by actual usage: COUNT_ONLY, FILTER_THEN_USE, or FULL_ACCESS
+# Read the file to check if .count is the only access (use fetchCount instead)
 Grep pattern="@Query\s+(private\s+)?var" glob="**/*.swift"
 
 # Main thread file I/O
+# FALSE POSITIVE: FileManager in async methods or Task.detached is fine
+# Only flag synchronous file I/O in view body, computed properties, or onAppear
 Grep pattern="(FileManager|Data\(contentsOf|String\(contentsOf)" glob="**/*View*.swift"
 
 # Synchronous network calls
@@ -152,20 +166,28 @@ Grep pattern="\.dataTask\(.*\)\.resume\(\)" glob="**/*.swift"
 
 ### 4.4 Concurrency Patterns (Swift 6 Readiness)
 
+**NOTE:** These patterns produce CANDIDATES, not confirmed issues. Each hit MUST be verified
+by reading the file (see Step 5 Verification Rule). Common false positives are noted below.
+
 ```bash
 # Sendable violations - mutable class without @unchecked
 Grep pattern="class.*(?<!@unchecked Sendable)" glob="**/*.swift"
 
 # Actor isolation issues
+# FALSE POSITIVE: nonisolated on UIKit delegate protocol methods is REQUIRED, not a violation
 Grep pattern="nonisolated.*func.*async" glob="**/*.swift"
 
 # Task without explicit priority
+# FALSE POSITIVE: Task {} in @MainActor view body inherits isolation — this is normal SwiftUI
+# Only flag Task {} in non-isolated contexts or where priority matters for background work
 Grep pattern="Task\s*\{" glob="**/*.swift"
 
 # Missing @MainActor on ViewModel
 Grep pattern="(class|struct).*ViewModel(?!.*@MainActor)" glob="**/*ViewModel.swift"
 
 # Dispatch to main thread (legacy pattern)
+# CLASSIFY EACH HIT: animation delay (asyncAfter) vs state update (async) vs layout workaround
+# Only state updates without asyncAfter are true migration candidates
 Grep pattern="DispatchQueue\.main\.(async|sync)" glob="**/*.swift"
 ```
 
@@ -237,6 +259,22 @@ Based on the user's "Mode" selection:
 | Testing | Coverage, framework, stability | `axiom-ios-testing`, `axiom-swift-testing` |
 
 **Quiet (sequential):** Use direct `Read`, `Glob`, `Grep` tools in sequence, referencing Axiom skill patterns where relevant.
+
+### Verification Rule (CRITICAL)
+
+Grep patterns produce candidates, NOT confirmed issues. Before reporting ANY finding as an issue:
+
+1. **Read the flagged file** — at minimum 20 lines of context around the match
+2. **Check structural context** — a pattern inside a nested closure may be safe depending on the outer scope (e.g., `ModelContext` used inside `Task {}` that inherits `@MainActor` is safe even if `Task.detached` appears nearby)
+3. **Classify before reporting** — label each grep hit as CONFIRMED, FALSE_POSITIVE, or INTENTIONAL before including it in findings
+4. **Never report grep counts as issue counts** — e.g., "60 DispatchQueue.main calls" is a grep count; the real issue count requires classifying each call (animation delay vs state update vs layout workaround)
+
+**Common false positive patterns to watch for:**
+- `Task {}` inside `@MainActor` class/view body → inherits isolation, safe
+- `DispatchQueue.main.asyncAfter` with comment about animation/layout → intentional
+- `ModelContext` captured by outer `Task {}` while `Task.detached` only captures Sendable values → safe, not a cross-isolation violation
+- `nonisolated` on protocol requirement methods (UIKit delegates) → required by protocol, not a choice
+- `http://` in XML namespace URIs or protocol-detection logic → not a real HTTP endpoint
 
 ---
 
@@ -432,7 +470,7 @@ AskUserQuestion with questions:
 ]
 ```
 
-If user selects yes, invoke `/implementation-plan` with the selected items.
+If user selects yes, invoke `/plan` with the selected items.
 
 ---
 
@@ -464,4 +502,4 @@ Write the report card to `.agents/research/YYYY-MM-DD-tech-reportcard.md` for fu
 - `/plain-talk-reportcard` - Non-technical version for stakeholders
 - `/performance-check` - Deeper performance analysis
 - `/security-audit` - Deeper security analysis
-- `/implementation-plan` - Create action plans from findings
+- `/plan` - Create action plans from findings
