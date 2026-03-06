@@ -18,6 +18,8 @@ metadata:
 
 You are performing a systematic workflow audit on this SwiftUI application.
 
+**Required output:** Every finding MUST include Urgency, Risk, ROI, and Blast Radius ratings using the Issue Rating Table format. Do not omit these ratings.
+
 ## Quick Commands
 
 | Command | Description |
@@ -67,15 +69,15 @@ For templates and examples:
 | Dead End | 🔴 CRITICAL | Entry point leads nowhere |
 | Wrong Destination | 🔴 CRITICAL | Entry point leads to wrong place |
 | Mock Data | 🔴 CRITICAL | Feature shows fabricated data when real data exists |
-| Incomplete Navigation | 🟠 HIGH | User must scroll/search after landing |
-| Missing Auto-Activation | 🟠 HIGH | Expected mode/state not set |
-| Unwired Data | 🟠 HIGH | Model data exists but feature ignores it |
-| Platform Parity Gap | 🟠 HIGH | Feature works on one platform, broken on another |
-| Promise-Scope Mismatch | 🟠 HIGH | Specific CTA opens generic/broad destination |
-| Two-Step Flow | 🟡 MEDIUM | Intermediate selection required |
-| Missing Feedback | 🟡 MEDIUM | No confirmation of success |
-| Inconsistent Pattern | 🟢 LOW | Same feature accessed differently |
-| Orphaned Code | 🟢 LOW | Feature exists but no entry point |
+| Incomplete Navigation | 🟡 HIGH | User must scroll/search after landing |
+| Missing Auto-Activation | 🟡 HIGH | Expected mode/state not set |
+| Unwired Data | 🟡 HIGH | Model data exists but feature ignores it |
+| Platform Parity Gap | 🟡 HIGH | Feature works on one platform, broken on another |
+| Promise-Scope Mismatch | 🟡 HIGH | Specific CTA opens generic/broad destination |
+| Two-Step Flow | 🟢 MEDIUM | Intermediate selection required |
+| Missing Feedback | 🟢 MEDIUM | No confirmation of success |
+| Inconsistent Pattern | ⚪ LOW | Same feature accessed differently |
+| Orphaned Code | ⚪ LOW | Feature exists but no entry point |
 
 ## Design Principles
 
@@ -162,9 +164,29 @@ Run all 5 layers sequentially, outputting findings to `.workflow-audit/` in the 
 After completing the audit, provide:
 
 1. **Summary** - Total entry points, issues by severity
-2. **Critical Issues** - Any blocking problems
-3. **Data Wiring Issues** - Features using mock data or ignoring real data
-4. **Recommendations** - Prioritized fix list
-5. **Next Steps** - What to do next
+2. **Issue Rating Table** - All findings in standardized table format (see below)
+3. **Critical Issues** - Any blocking problems (detail)
+4. **Data Wiring Issues** - Features using mock data or ignoring real data
+5. **Recommendations** - Prioritized fix list
+6. **Next Steps** - What to do next
+
+### Issue Rating Table
+
+All findings MUST be presented in this format, sorted by Urgency then ROI:
+
+```markdown
+| # | Finding | Urgency | Risk: Fix | Risk: No Fix | ROI | Blast Radius | Fix Effort |
+|---|---------|---------|-----------|-------------|-----|-------------|------------|
+| 1 | Dead end: "View Warranty" → empty sheet | 🔴 Critical | ⚪ Low | 🔴 Critical | 🟠 Excellent | 🟢 2 files | Trivial |
+| 2 | Promise-scope mismatch: "Track Price" opens generic list | 🟡 High | 🟢 Medium | 🟡 High | 🟠 Excellent | 🟡 4 files | Small |
+```
+
+Use the Issue Rating scale:
+- **Urgency:** 🔴 CRITICAL (dead end, wrong destination, mock data) · 🟡 HIGH (broken promise, missing activation, unwired data) · 🟢 MEDIUM (two-step flow, missing feedback) · ⚪ LOW (inconsistency, orphaned code)
+- **Risk: Fix:** Risk of the fix introducing regressions
+- **Risk: No Fix:** User-facing consequence of leaving the issue
+- **ROI:** 🟠 Excellent · 🟢 Good · 🟡 Marginal · 🔴 Poor
+- **Blast Radius:** How many files/entry points are affected
+- **Fix Effort:** Trivial / Small / Medium / Large
 
 </workflow-audit>

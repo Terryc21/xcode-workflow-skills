@@ -16,6 +16,8 @@ metadata:
 
 **YOU MUST EXECUTE THIS WORKFLOW. Do not just describe it.**
 
+**Required output:** Every finding MUST include Urgency, Risk, ROI, and Blast Radius ratings using the Issue Rating Table format. Do not omit these ratings.
+
 ---
 
 ## Pre-flight: Git Safety Check
@@ -374,9 +376,24 @@ Or use `/scan-similar-bugs` for a more thorough scan.
 - [x] Tests pass
 - [ ] Regression test added
 
+## Issue Rating Table
+
+| # | Finding | Urgency | Risk: Fix | Risk: No Fix | ROI | Blast Radius | Fix Effort |
+|---|---------|---------|-----------|-------------|-----|-------------|------------|
+| 1 | [Primary bug] File.swift:45 — [description] | 🔴 Critical | ⚪ Low | 🔴 Critical | 🟠 Excellent | ⚪ 1 file | Trivial |
+
+Use the Issue Rating scale:
+- **Urgency:** 🔴 CRITICAL (crash/data loss) · 🟡 HIGH (incorrect behavior) · 🟢 MEDIUM (degraded UX) · ⚪ LOW (cosmetic/minor)
+- **Risk: Fix:** Risk of the fix introducing regressions (⚪ Low for isolated changes, 🟡 High for shared code paths)
+- **Risk: No Fix:** User-facing consequence if left unfixed
+- **ROI:** 🟠 Excellent · 🟢 Good · 🟡 Marginal · 🔴 Poor
+- **Blast Radius:** How many callers/files are exposed to this bug
+- **Fix Effort:** Trivial / Small / Medium / Large
+
 ## Similar Patterns Found
 
 [List any other instances of the same bug pattern, or "None found"]
+Include each similar pattern as a row in the Issue Rating Table above.
 
 ## Prevention
 
