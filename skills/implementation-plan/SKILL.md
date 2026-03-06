@@ -12,6 +12,14 @@ metadata:
 
 # Implementation Plan Generator
 
+> **DEPRECATED:** This skill has been replaced by `/plan`, which adds audit-aware mode, T-shirt sizing, and the Golden Rule. Use `/plan` instead.
+>
+> **Migration:** `/implementation-plan` → `/plan` (standalone mode is identical). `/implementation-plan` with audit findings → `/plan --audit`.
+>
+> This file is kept so existing muscle memory gets a clear redirect rather than a broken command. **Do not use this skill for new work.**
+
+---
+
 > **Quick Ref:** Interactive planning: gather requirements → analyze codebase → phased task list with risk/ROI ratings → test plan → rollback strategy.
 
 **YOU MUST EXECUTE THIS WORKFLOW. Do not just describe it.**

@@ -6,6 +6,10 @@ skills/app-store-code-review/
 skills/flashcard-generator/
 skills/humanizer/
 
+# Private/project-specific skills
+skills/codebase-audit/
+skills/plan/
+
 # Editor
 *.swp
 *~
