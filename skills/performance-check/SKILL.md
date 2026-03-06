@@ -206,6 +206,7 @@ Grep pattern="GeometryReader" glob="**/*.swift"
 # @Query without predicate (full table scans)
 # Read file to check: is .count the only access? → should use fetchCount
 # Does the view filter client-side? → predicate should be on the query
+# INTENTIONAL: views that genuinely need all records (e.g., main item list) are OK
 Grep pattern="@Query\s+(private\s+)?var" glob="**/*.swift"
 
 # Large view bodies (>80 lines) — check for complexity

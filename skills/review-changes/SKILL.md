@@ -81,6 +81,7 @@ Grep pattern="try!" path="<changed_file>"
 
 # Bare try? — silently swallows errors
 # FALSE POSITIVE: try? where nil is the designed fallback
+# INTENTIONAL: try? for operations where failure is acceptable (e.g., file deletion)
 Grep pattern="try\?" path="<changed_file>"
 
 # Empty catch blocks — swallowing errors
@@ -112,7 +113,7 @@ Grep pattern="http://" path="<changed_file>"
 Look in the diff for:
 - File I/O or network calls not in async/Task context
 - Formatters (`DateFormatter()`, `NumberFormatter()`) created inside view body (should be cached)
-- `@Query` without predicate when only a subset is needed
+- `@Query` without predicate when only a subset is needed (INTENTIONAL if view genuinely needs all records)
 - Sorting/filtering in `var body` (recomputed every render)
 
 ### 2.4 Concurrency
