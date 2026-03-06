@@ -18,6 +18,28 @@ metadata:
 
 ---
 
+## Permissions
+
+```
+AskUserQuestion with questions:
+[
+  {
+    "question": "How should Claude handle bash commands, file edits, and writes during this skill run?",
+    "header": "Permissions",
+    "options": [
+      {"label": "Autonomous (Recommended)", "description": "Proceed without per-action approval prompts — destructive actions still require approval"},
+      {"label": "Supervised", "description": "Ask for approval before each bash command, file edit, or write"}
+    ],
+    "multiSelect": false
+  }
+]
+```
+
+If **Autonomous**: proceed through all steps without per-action approval prompts. Destructive actions (file deletion, git reset, dropping data) still require explicit user approval.
+If **Supervised**: request approval before each bash command, file edit, or write.
+
+---
+
 ## Pre-flight: Git Safety Check
 
 ```bash
@@ -96,18 +118,29 @@ blocks=$(grep -cE "^(struct|class|extension|enum) " "$file")
 find Tests -name "*${basename}*" | wc -l
 ```
 
-### 1.3: Display Risk Assessment Table
+### 1.3: Count Blast Radius
 
-Present one table per file type, using the Issue Rating Table format (from CLAUDE.md if defined, otherwise use the scale below):
+For each oversized file, count downstream dependents:
+
+```bash
+# Count files that reference this type (exclude the file itself and Tests/)
+typename=$(basename "$file" .swift)
+Grep pattern="$typename" glob="Sources/**/*.swift" output_mode="files_with_matches"
+# Subtract 1 for the file itself
+```
+
+### 1.4: Display Risk Assessment Table
+
+Present one table per file type. Columns combine color indicators with actual numbers for at-a-glance scanning with precise data.
 
 ```markdown
 ## Refactoring Risk Assessment — Oversized Files
 
 ### Views (trigger: >600 lines)
 
-| # | File | Lines | Over | Urgency | Risk: Fix | Risk: No Fix | ROI | Blast Radius | Fix Effort | Tests |
-|---|------|-------|------|---------|-----------|-------------|-----|-------------|------------|-------|
-| 1 | `FileName.swift` | N | +N | 🟢/🟡/⚪ | 🟢/🟡/⚪ | 🟢/🟡/⚪ | 🟠/🟢/🟡/🔴 | 🟢/🟡/⚪ | S/M/L | Yes/No/Partial |
+| # | File | Lines | Over | Blast Radius | #if os | Funcs | Tests | ROI | Effort |
+|---|------|-------|------|-------------|--------|-------|-------|-----|--------|
+| 1 | `FileName` | 1289 | 🟡 +289 | 🟢 5 files | 🟡 10 | 1 | Partial | 🟢 Good | Large |
 
 ### ViewModels (trigger: >500 lines)
 ...
@@ -119,25 +152,44 @@ Present one table per file type, using the Issue Rating Table format (from CLAUD
 ...
 ```
 
-**Rating scale** (use CLAUDE.md scale if project defines one):
+**Color thresholds:**
 
-| Indicator | General meaning | ROI meaning |
-|-----------|----------------|-------------|
-| 🔴 | Critical / high concern | Poor return |
-| 🟡 | High / notable | Marginal return |
-| 🟢 | Medium / moderate | Good return |
-| ⚪ | Low / negligible | — |
-| 🟠 | Pass / positive | Excellent return |
+| Column | ⚪ Low | 🟢 Medium | 🟡 High |
+|--------|--------|-----------|---------|
+| **Over** | <50 lines | 50–200 lines | >200 lines |
+| **Blast Radius** | 0–2 files | 3–8 files | >8 files |
+| **#if os** | 0–3 blocks | 4–8 blocks | >8 blocks |
 
-**Rating guidelines for file-size refactoring:**
-- **Urgency**: 🟡 High if file is actively being modified (frequent merge conflicts); 🟢 Medium if over by >100 lines; ⚪ Low if barely over threshold
-- **Risk: Fix**: 🟡 High if many `#if os` blocks (>8) or no test coverage; 🟢 Medium if moderate complexity; ⚪ Low if isolated
-- **Risk: No Fix**: 🟡 High if causing merge conflicts or blocking other work; 🟢 Medium if growing; ⚪ Low if stable
-- **ROI**: 🔴 Poor if barely over threshold (<20 lines); 🟡 Marginal if high blast radius; 🟢 Good if isolated with clear split points; 🟠 Excellent if blocking other work
-- **Blast Radius**: Based on downstream dependents (grep for type name usage)
-- **Fix Effort**: Small (<2h), Medium (2-4h), Large (4h+)
+**ROI** (synthesized judgment):
+- 🟠 Excellent — blocking other work or causing merge conflicts
+- 🟢 Good — significantly over threshold with low blast radius and clear split points
+- 🟡 Marginal — moderate over with high blast radius
+- 🔴 Poor — barely over threshold (<50 lines) or effort outweighs benefit
+
+**Effort:** Small (<2h) / Medium (2–4h) / Large (4h+)
 
 If no files exceed thresholds, report "All files within size guidelines — no refactoring candidates found" and skip to Step 2.
+
+### 1.5: Offer Rating Explanation
+
+After displaying the table, ask if the user wants column definitions:
+
+```
+AskUserQuestion with questions:
+[
+  {
+    "question": "Would you like an explanation of the rating columns?",
+    "header": "Ratings",
+    "options": [
+      {"label": "No, I understand the ratings", "description": "Skip explanation and proceed to target selection"},
+      {"label": "Yes, explain the columns", "description": "Show what each column means and how colors are assigned"}
+    ],
+    "multiSelect": false
+  }
+]
+```
+
+If "Yes", display the color thresholds table and ROI/Effort definitions from 1.4, then proceed to Step 2.
 
 ---
 
