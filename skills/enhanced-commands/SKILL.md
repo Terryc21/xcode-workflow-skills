@@ -1,7 +1,7 @@
 ---
 name: enhanced-commands
-description: Enhanced list of custom Claude commands for iOS and macOS Swift projects with detailed prompts, parameters, and examples.
-version: 2.0.0
+description: Enhanced list of custom Claude commands for iOS and macOS Swift projects with examples and output locations.
+version: 2.1.0
 author: Terry Nyberg
 license: MIT
 allowed-tools: [Read]
@@ -14,10 +14,7 @@ Display the following command reference to the user:
 
 # Enhanced Commands
 
-Commands are grouped by category for easier navigation. Each includes:
-- **Parameters**: Required/optional flags.
-- **Example**: Sample usage.
-- **Output**: Where results are saved.
+Commands are grouped by category. Each includes examples and output locations.
 
 ## Code Analysis & Review
 
@@ -25,74 +22,56 @@ Commands are grouped by category for easier navigation. Each includes:
 |---------|-------------|
 | `/tech-talk-reportcard` | Technical codebase analysis with A-F grades (architecture, security, performance, concurrency, accessibility, etc.) for developers. |
 | `/plain-talk-reportcard` | Codebase analysis with A-F grades and plain-language summaries for non-technical stakeholders. |
+| `/codebase-audit` | Hybrid codebase audit with automated scans and parallel agent analysis. |
 | `/scan-similar-bugs` | Find similar bug patterns codebase-wide after a fix. |
-| `/review-changes` | Pre-commit review of staged changes for bugs, style, tests. |
+| `/review-changes` | Pre-commit review of staged/unstaged changes for bugs, style, tests. |
 | `/dead-code-scanner` | Find unused code after refactors or as ongoing hygiene. |
 | `/workflow-audit` | Systematic UI workflow auditing — entry points, flow tracing, dead ends, data wiring. |
 
-**`/tech-talk-reportcard` Details** (v2.0.0)
-- Parameters: `[path]` (default: entire repo)
-- Example: `/tech-talk-reportcard Sources/`
+**`/tech-talk-reportcard` Details** (v3.0.0)
 - Output: `.agents/research/YYYY-MM-DD-tech-reportcard.md`
 - Features:
   - Interactive questions (CLAUDE.md inclusion, mode, timeline, focus)
-  - **Automated grep scans** for architecture, security, performance, concurrency, accessibility, testing, energy
-  - **9 grading categories**: Architecture, Code Quality, Performance, Concurrency, Security, Accessibility, Testing, UI/UX, Data
-  - **Trend comparison** to previous reports (grade changes ↑↓→)
-  - **Deep dive option** - invoke Axiom skills for category-specific analysis
+  - Automated grep scans for architecture, security, performance, concurrency, accessibility, testing, energy
+  - 9 grading categories: Architecture, Code Quality, Performance, Concurrency, Security, Accessibility, Testing, UI/UX, Data
+  - Trend comparison to previous reports (grade changes)
   - Prioritized issues with Urgency/Risk/ROI/Blast ratings
-  - Follow-up to `/implementation-plan`
 
-**`/plain-talk-reportcard` Details** (v2.0.0)
-- Parameters: `[path]` (default: entire repo)
-- Example: `/plain-talk-reportcard`
+**`/plain-talk-reportcard` Details** (v3.0.0)
 - Output: `.agents/research/YYYY-MM-DD-plain-reportcard.md`
 - Features:
-  - Interactive questions (CLAUDE.md, mode, backend, timeline, focus)
-  - **7 grading categories** in plain language: User Experience, Reliability, Accessibility, Security, Performance, Code Health, Testing
-  - **Trend comparison** to previous reports
-  - **Plain language glossary** translates technical terms
-  - Effort estimates for each issue (e.g., "~2 days")
-  - Risk explanations (e.g., "Risk if ignored: Bad reviews")
-  - Recommended action timeline (Week 1, Week 2-3, Month 2)
-  - Deep dive option for accessibility, UX, security
-  - Follow-up to `/implementation-plan`
+  - 7 grading categories in plain language: User Experience, Reliability, Accessibility, Security, Performance, Code Health, Testing
+  - Trend comparison to previous reports
+  - Plain language glossary translates technical terms
+  - Effort estimates and risk explanations for each issue
 
-**`/security-audit` Details**
-- Parameters: `--quick` (surface only), `--focus=secrets|storage|network|privacy`
-- Example: `/security-audit --focus=secrets`
+**`/security-audit` Details** (v2.0.0)
 - Output: `.agents/research/YYYY-MM-DD-security-audit.md`
 - Features: Automated grep patterns, severity scoring (CRITICAL/HIGH/MEDIUM/LOW), remediation code examples, Privacy Manifest validation.
 
-**`/performance-check` Details**
-- Parameters: `--quick` (surface only), `--focus=memory|cpu|energy|swiftui|launch`
-- Example: `/performance-check --focus=memory`
+**`/performance-check` Details** (v2.0.0)
 - Output: `.agents/research/YYYY-MM-DD-performance-check.md`
-- Features: Automated anti-pattern detection, Instruments integration suggestions, before/after code examples.
+- Features: Automated anti-pattern detection, before/after code examples, profiling recommendations.
 
-**`/dead-code-scanner` Details**
-- Parameters: `quick` (recent changes), `full` (entire codebase), `remove` (with verification)
-- Example: `/dead-code quick`, `/dead-code remove --verify-with-tests`
+**`/dead-code-scanner` Details** (v2.0.0)
 - Output: `.agents/research/YYYY-MM-DD-dead-code-*.md`
-- Features: Build + test verification before removal, allowlist support, false positive tracking.
+- Features: Quick (post-refactor) or full (hygiene) scan modes, Swift-specific exclusions, confidence classification.
 
 **`/workflow-audit` Details** (v2.1.1)
-- Parameters: `layer1|layer2|layer3|layer4|layer5`, `fix`, `status`
-- Example: `/workflow-audit`, `/workflow-audit layer1`, `/workflow-audit fix`
 - Output: `.workflow-audit/` directory in project root
-- Features: 5-layer analysis (discovery → trace → issues → evaluation → data wiring), issue categories with severity, design principle validation.
+- Features: 5-layer analysis (discovery, trace, issues, evaluation, data wiring), issue categories with severity, design principle validation.
 
 ## Planning & Refactoring
 
 | Command | Description |
 |---------|-------------|
-| `/implementation-plan` | Implementation planning with file impacts, deps, phases, and interactive questions. |
+| `/plan` | Epic decomposition into trackable tasks. Audit-aware or standalone mode. |
+| `/implementation-plan` | *(Deprecated — use `/plan`)* Structured implementation planning. |
 | `/safe-refactor` | Refactor plan with blast radius, deps, rollback. |
 
-**`/implementation-plan` Details**
-- Parameters: `feature-name`, `--phase=1`
-- Example: `/implementation-plan user-auth --phase=1`
-- Features: Interactive questions for work type/risk/timeline, table-formatted impact analysis, phased task lists, risk assessment, rollback strategy.
+**`/plan` Details** (v1.1.0)
+- Output: `.agents/research/YYYY-MM-DD-implementation-plan.md`
+- Features: Auto-detects audit reports for audit-aware mode, T-shirt sizing, Golden Rule (WHAT not HOW), phased task lists with Urgency/Risk/ROI/Blast ratings, rollback strategy.
 
 ## Debugging & Testing
 
@@ -100,44 +79,35 @@ Commands are grouped by category for easier navigation. Each includes:
 |---------|-------------|
 | `/debug` | Systematic debug: reproduce, isolate, hypothesize, fix. |
 | `/generate-tests` | Unit/UI tests with edges, mocks. Auto-detects Swift Testing vs XCTest. |
-| `/run-tests` | Smart test runs, supports `--unattended`. |
-| `/ui-scan` | UI setup with onboarding bypass, accessibility scan. |
+| `/run-tests` | Smart test execution with split strategies (UI sequential + unit parallel). |
+| `/ui-scan` | Accessibility identifier scan and UI test environment setup. |
+| `/scan-similar-bugs` | After fixing a bug, find the same pattern across the codebase. |
 
-**`/debug` Details** (v1.1.0)
-- Parameters: `issue-description`, `--recent`, `--crash`
-- Example: `/debug "Crash on login"`, `/debug --recent`
+**`/debug` Details** (v2.0.0)
 - Output: `.agents/research/YYYY-MM-DD-debug-*.md`
 - Features: Concrete evidence-gathering (git log, grep patterns), common iOS bug pattern checklist, hypothesis table, root cause report, similar bug scan integration.
 
-**`/generate-tests` Details**
-- Parameters: `TypeName` or `path/to/File.swift`, `--ui` for UI tests
-- Example: `/generate-tests ItemViewModel`, `/generate-tests --ui ItemListView`
-- Features: Auto-detects test framework (Swift Testing or XCTest), generates mocks, covers edge cases.
+**`/generate-tests` Details** (v2.0.0)
+- Features: Auto-detects test framework (Swift Testing or XCTest), generates mocks, covers edge cases, parameterized test support.
 
-**`/run-tests` Details**
-- Parameters: `--split` (UI sequential + unit parallel), `--sequential`, `--parallel`, `--unattended`
-- Example: `/run-tests --unattended --cleanup`
-- Features: Smart split strategy for stability, unattended mode for hands-off execution.
+**`/run-tests` Details** (v2.0.0)
+- Features: Smart split strategy (UI sequential + unit parallel), all sequential, all parallel, or unit-only modes.
 
 ## Release & Deployment
 
 | Command | Description |
 |---------|-------------|
-| `/release-prep` | Checklist: version, changelog, metadata. |
+| `/release-prep` | Pre-release checklist: version, changelog, privacy, metadata, code readiness. |
 | `/release-screenshots` | Capture App Store screenshots across all required device sizes. |
 | `/update-website` | Sync website content with app codebase. |
 | `/explain` | Deep-dive on file/feature/data flow. |
 
-**`/release-prep` Details** (v1.1.0)
-- Parameters: `version`, `--patch`, `--minor`, `--changelog-only`
-- Example: `/release-prep 2.1.0`, `/release-prep --patch`
+**`/release-prep` Details** (v2.0.0)
 - Output: `.agents/research/YYYY-MM-DD-release-prep-vX.Y.Z.md`
-- Features: Automated version bump (find and edit pbxproj), changelog generation from git history, privacy manifest validation, code readiness checks (debug code, TODOs, warnings), archive readiness.
+- Features: Automated version bump, changelog generation, privacy manifest validation, deployment target check, ATS check, entitlements check, app icon validation, localization completeness.
 
-**`/release-screenshots` Details**
-- Parameters: (interactive)
-- Example: `/release-screenshots`
-- Features: Multi-device capture (6.9", 6.5", 5.5"), status bar override, organized folder output.
+**`/release-screenshots` Details** (v2.0.0)
+- Features: Multi-device capture (6.9", 6.5", 5.5"), status bar override, organized folder output, device frame support.
 
 ## Interactive Features
 
@@ -148,23 +118,7 @@ All analysis commands include:
 3. **Output Files**: Reports saved to `.agents/research/` for future reference
 4. **Follow-up Actions**: Option to generate implementation plans or fixes from findings
 
-## Axiom Integration
-
-For iOS-specific deep dives, commands invoke Axiom skills:
-
-| Command | Axiom Skills Invoked |
-|---------|---------------------|
-| `/tech-talk-reportcard` | `axiom-swiftui-architecture`, `axiom-ios-performance`, `axiom-ios-concurrency`, `axiom-ios-accessibility`, `axiom-ios-testing`, `axiom-memory-debugging` |
-| `/plain-talk-reportcard` | `axiom-ios-accessibility`, `axiom-ios-ui`, `axiom-hig` |
-| `/security-audit` | `axiom-storage-diag`, `axiom-file-protection-ref` |
-| `/performance-check` | `axiom-swift-performance`, `axiom-swiftui-performance`, `axiom-ios-performance`, `axiom-memory-debugging`, `axiom-energy` |
-| `/debug` | `axiom-memory-debugging`, `axiom-hang-diagnostics`, `axiom-swiftui-debugging` |
-| `/generate-tests` | `axiom-swift-testing`, `axiom-testing-async`, `axiom-xctest-automation` |
-
-For schema migrations, use Axiom directly: `/axiom:axiom-swiftdata-migration`
-
 ## Notes
 
 - **Execution directives**: All workflow skills include "YOU MUST EXECUTE THIS WORKFLOW" to ensure action, not just description.
-- **Validation**: All prompts check inputs (e.g., "If no path, scan repo root").
 - **Output standardization**: Analysis skills write to `.agents/research/YYYY-MM-DD-*.md`.
