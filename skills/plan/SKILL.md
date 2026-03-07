@@ -1,7 +1,7 @@
 ---
 name: plan
-description: Epic decomposition into trackable, right-sized tasks. Audit-aware mode ingests codebase-audit/tech-reportcard reports. Standalone mode plans features, bugs, and refactors from scratch.
-version: 1.2.0
+description: Epic decomposition into trackable, right-sized tasks. Three modes — audit-aware (codebase-audit reports), workflow-audit-aware (handoff.yaml with pre-rated findings), standalone (from scratch). Light convention scanning for projects without CLAUDE.md.
+version: 1.3.0
 author: Terry Nyberg
 license: MIT
 allowed-tools: [Glob, Grep, Read, Write, AskUserQuestion]
@@ -17,6 +17,8 @@ metadata:
 **YOU MUST EXECUTE THIS WORKFLOW. Do not just describe it.**
 
 **Required output:** Every task MUST include Size, Urgency, Risk, ROI, Blast Radius, and LOE ratings. Do not omit these ratings.
+
+> **Rating format:** See `skills/shared/rating-system.md` for column definitions, indicator scale, and table formatting rules.
 
 ## Pre-flight: Git Safety Check
 
@@ -57,34 +59,50 @@ If "Commit first": Ask for a commit message, stage changed files, and commit. Th
 
 ## Step 1: Mode Detection
 
-Detect whether to run in **audit-aware** or **standalone** mode.
+Detect which mode to run in: **audit-aware**, **workflow-audit-aware**, or **standalone**.
 
 ```
-# Check for audit reports
+# Check for codebase audit reports
 Glob pattern=".agents/research/*-codebase-audit.md"
 Glob pattern=".agents/research/*-tech-reportcard.md"
+
+# Check for workflow audit handoff
+Glob pattern=".workflow-audit/handoff.yaml"
 ```
 
 **Decision logic:**
 
 | Condition | Mode |
 |-----------|------|
+| User passes `--workflow-audit` | Workflow-audit-aware (error if no handoff found) |
 | User specifies audit mode | Audit-aware (error if no report found) |
-| User specifies standalone mode | Standalone (ignore reports) |
-| Report found AND <14 days old | Audit-aware |
+| User specifies standalone mode | Standalone (ignore all reports) |
+| `.workflow-audit/handoff.yaml` found AND `audit_date` <14 days | Workflow-audit-aware |
+| Codebase audit report found AND <14 days old | Audit-aware |
 | Report found AND ≥14 days old | Standalone (warn: "Stale audit report found — run `/codebase-audit` for fresh data") |
+| Both workflow-audit and codebase-audit found | Workflow-audit-aware takes priority (more specific) |
 | No report found | Standalone |
 
 Parse the report filename date: `YYYY-MM-DD-codebase-audit.md` or `YYYY-MM-DD-tech-reportcard.md`.
+Parse `audit_date` from `handoff.yaml` for workflow-audit mode.
 
 If multiple reports exist, use the most recent one.
+
+**Mode summary:**
+
+| Mode | Source | Ratings Pre-computed? | Convention Scan? |
+|------|--------|-----------------------|------------------|
+| Audit-aware | `.agents/research/*-codebase-audit.md` | No — extract and rate | No — uses audit context |
+| Workflow-audit-aware | `.workflow-audit/handoff.yaml` | Yes — use as-is | Yes — if no CLAUDE.md |
+| Standalone | User-provided task description | No — rate from scratch | Yes — if no CLAUDE.md |
 
 **Output:**
 
 ```
-## Mode: [Audit-Aware / Standalone]
+## Mode: [Audit-Aware / Workflow-Audit-Aware / Standalone]
 Report: [filename or "none"]
 Report age: [N days or "n/a"]
+Staleness warnings: [count or "none"]
 ```
 
 ---
@@ -217,6 +235,123 @@ Produce:
 
 ---
 
+## Step 2C: Workflow Audit Ingest (workflow-audit-aware mode only)
+
+> Skip this step in audit-aware or standalone mode.
+
+Read the workflow audit handoff brief and ingest pre-rated findings.
+
+```
+Read file_path=".workflow-audit/handoff.yaml"
+```
+
+### Parse Handoff Brief
+
+Extract:
+- `project`, `audit_date`, `source_files_scanned`
+- `summary` counts (critical/high/medium/low)
+- All `issues[]` with their pre-computed ratings
+
+**Ratings are pre-computed** — do NOT re-rate issues from the handoff brief. The audit skill already applied the rating system. Use the ratings as-is for planning.
+
+### Staleness Check
+
+Compare `file_timestamps` from the handoff against current file modification dates:
+
+```bash
+# For each file in file_timestamps, check if it changed
+stat -f "%Sm" -t "%Y-%m-%dT%H:%M:%SZ" "<file path>"
+```
+
+**If files changed since audit:**
+- List changed files and affected issue IDs
+- Warn but do NOT block: "These issues may need spot-checking during implementation"
+- Flag affected issues in the plan output
+
+**If `audit_date` >14 days old:**
+- Warn: "Workflow audit is stale — consider re-running `/workflow-audit` for fresh data"
+
+### Group Hint Processing
+
+Read `group_hint` values from issues. Use them as suggestions for task grouping in Step 7:
+- Issues sharing a `group_hint` are candidates for a single task
+- Respect T-shirt sizing rules — don't create L-sized tasks just to honor hints
+- Hints are suggestions, not mandates
+
+### Produce Handoff Digest
+
+```markdown
+## Handoff Digest
+
+| Field | Value |
+|-------|-------|
+| Project | [name] |
+| Audit Date | [date] |
+| Files Scanned | [count] |
+| Total Issues | [count] |
+
+### Issue Summary (from audit)
+
+| # | Finding | Urgency | Risk: Fix | Risk: No Fix | ROI | Blast Radius | Fix Effort | Group Hint | Stale? |
+|---|---------|---------|-----------|--------------|-----|--------------|------------|------------|--------|
+| 1 | [finding] | [urgency] | [risk_fix] | [risk_no_fix] | [roi] | [blast] | [effort] | [hint] | [Yes/No] |
+
+### Staleness Warnings (if any)
+| File | Audit Date | Current Date | Affected Issues |
+|------|------------|--------------|-----------------|
+| [path] | [date] | [date] | #1, #4 |
+```
+
+---
+
+## Step 2D: Light Convention Scanning (workflow-audit-aware and standalone modes)
+
+> Skip in audit-aware mode (codebase audit provides enough context).
+> Skip if project has a comprehensive CLAUDE.md (>100 lines with code patterns).
+
+Detect project conventions automatically when no CLAUDE.md is available:
+
+```bash
+# Platform targets
+grep -r "#if os(" Sources/ | head -5
+
+# Data framework
+grep -rl "@Model" Sources/ | head -3          # SwiftData
+grep -rl "NSManagedObject" Sources/ | head -3  # CoreData
+grep -rl "GRDB" Sources/ | head -3             # GRDB
+
+# Feedback patterns
+grep -rl "HapticManager\|UINotificationFeedbackGenerator" Sources/ | head -3
+grep -rl "ToastManager\|toast\|snackbar" Sources/ | head -3
+
+# Confirmation patterns
+grep -rl "\.alert.*destructive\|confirmationDialog" Sources/ | head -3
+
+# Navigation pattern
+grep -rl "NavigationSplitView\|TabView\|NavigationStack" Sources/ | head -3
+```
+
+### Output: Detected Conventions Table
+
+Display before planning begins:
+
+```markdown
+## Detected Conventions
+
+| Convention | Detected | Evidence |
+|------------|----------|----------|
+| Platforms | iOS + macOS | `#if os(iOS)` in 45 files |
+| Data Framework | SwiftData | `@Model` in 12 files |
+| Haptic Feedback | Yes | `HapticManager` in 8 files |
+| Toast/Notifications | Yes | `ToastManager` in 15 files |
+| Confirmation Dialogs | Yes | `.alert` with destructive in 22 files |
+| Navigation | NavigationSplitView + TabView | Split view in 3 files, TabView in 1 |
+```
+
+This informs fix planning (e.g., "this project uses HapticManager, so feedback fixes should use it too").
+
+---
+
 ## Step 3: Interactive Input
 
 **IMPORTANT**: Use `AskUserQuestion` to gather requirements.
@@ -260,7 +395,7 @@ AskUserQuestion with questions:
 ]
 ```
 
-### Audit-mode scope question (audit-aware only)
+### Scope question (audit-aware and workflow-audit-aware modes)
 
 After the common questions, also ask:
 
@@ -406,9 +541,9 @@ Same table structure, but no Phase A: Blockers. Use standard phasing:
 | C: UI Integration | 3 | [UI work] | M | [files] | M | M | H | [scope] | [Xh] | Phase B |
 | D: Polish | 4 | [Polish / edge cases] | S | [files] | L | L | M | [scope] | [Xh] | Phase C |
 
-### Audit task traceability
+### Task traceability
 
-In audit-aware mode, every task MUST trace back to its source finding:
+In audit-aware and workflow-audit-aware modes, every task MUST trace back to its source finding(s):
 
 ```
 Task 3: "Fix actor isolation in BackgroundSyncManager"
@@ -416,7 +551,14 @@ Source: Audit finding #4 (Concurrency, HIGH)
 Size: M (3 files: BackgroundSyncManager.swift, SyncService.swift, SyncServiceTests.swift)
 ```
 
-Group related audit findings into single M-sized tasks where they share the same files or logical area. Do NOT create one task per finding — combine related findings.
+```
+Task 2: "Add confirmation dialogs to 5 destructive actions"
+Source: Workflow-audit issues #3, #5, #8, #11, #14 (missing_confirmations)
+Size: M (5 files)
+Stale: No
+```
+
+Group related findings into single M-sized tasks where they share the same files or logical area. Do NOT create one task per finding — combine related findings. In workflow-audit mode, use `group_hint` as a starting point for grouping.
 
 ---
 
