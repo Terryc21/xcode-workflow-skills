@@ -9,6 +9,20 @@
 
 > ALL findings MUST be presented in a single markdown table. Each finding is ONE ROW. Ratings are COLUMNS read left-to-right. Never expand findings into individual sections with bullet-pointed ratings.
 
+**Also wrong — separate headed sections per category:**
+
+```markdown
+## Data Wiring Issues
+- 0 mock data in production features
+- Cross-feature flows: PriceWatch → RepairKeepReplace — connected
+
+## Orphaned Views
+- InformationHelpView — never instantiated
+- ToolsHelpView — never instantiated
+```
+
+This is the same problem as the vertical list: it breaks findings into scrollable blocks instead of keeping them in one scannable table. Data wiring findings, orphaned views, missing confirmations — ALL go in the same table. Use the Finding column for context (e.g., "Data wiring: diyNotes defined but never shown in UI").
+
 **Correct — scannable table (one row per finding):**
 
 ```markdown
