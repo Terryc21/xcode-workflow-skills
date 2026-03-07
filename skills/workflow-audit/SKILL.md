@@ -1,7 +1,7 @@
 ---
 name: workflow-audit
 description: 'Systematic UI workflow auditing for SwiftUI applications. Discovers entry points, traces user flows, detects dead ends and broken promises, audits data wiring, evaluates from user perspective. Triggers: "workflow audit", "audit flows", "find dead ends", "check navigation".'
-version: 2.1.1
+version: 2.2.0
 author: Terry Nyberg
 license: MIT
 allowed-tools: [Read, Grep, Glob, Bash, Edit, Write, AskUserQuestion]
@@ -30,6 +30,8 @@ You are performing a systematic workflow audit on this SwiftUI application.
 | `/workflow-audit layer3` | Issues — detect problems across codebase |
 | `/workflow-audit layer4` | Evaluate — assess user impact |
 | `/workflow-audit layer5` | Data wiring — verify real data usage |
+| `/workflow-audit trace "A → B → C"` | Trace a specific user flow path |
+| `/workflow-audit diff` | Compare current findings against previous audit |
 | `/workflow-audit fix` | Generate fixes for found issues |
 | `/workflow-audit status` | Show audit progress and remaining issues |
 
@@ -74,8 +76,12 @@ For templates and examples:
 | Unwired Data | 🟡 HIGH | Model data exists but feature ignores it |
 | Platform Parity Gap | 🟡 HIGH | Feature works on one platform, broken on another |
 | Promise-Scope Mismatch | 🟡 HIGH | Specific CTA opens generic/broad destination |
+| Buried Primary Action | 🟡 HIGH | Primary button hidden below scroll fold |
+| Dismiss Trap | 🟡 HIGH | Only visible action is Cancel/back, no forward path |
 | Two-Step Flow | 🟢 MEDIUM | Intermediate selection required |
 | Missing Feedback | 🟢 MEDIUM | No confirmation of success |
+| Gesture-Only Action | 🟢 MEDIUM | Feature only accessible via swipe/long-press |
+| Loading State Trap | 🟢 MEDIUM | Spinner with no cancel/timeout/escape |
 | Inconsistent Pattern | ⚪ LOW | Same feature accessed differently |
 | Orphaned Code | ⚪ LOW | Feature exists but no entry point |
 
@@ -99,6 +105,16 @@ For templates and examples:
 > Never show mock/hardcoded data when real user data exists.
 > Never ignore model relationships that would improve decisions.
 
+### 6. Primary Action Visibility
+> The primary action must be visible without scrolling after the user completes the key interaction.
+> Pin Save/Continue/Done buttons outside ScrollView or in toolbar. Never bury them below tall content.
+
+### 7. Escape Hatch
+> Every view must have a visible way to go forward OR back. Cancel alone is not enough after user completes a step.
+
+### 8. Gesture Discoverability
+> Every action available via gesture (swipe, long-press) should also be accessible via a visible button or menu.
+
 ### Freshness
 
 Base all findings on current source code only. Do not read or reference
@@ -121,11 +137,29 @@ Run all 5 layers sequentially, outputting findings to `.workflow-audit/` in the 
 5. Catalog all entry points in `layer1-inventory.yaml`
 6. Flag suspicious patterns for Layer 2 investigation
 
-### If "layer2" or "trace":
+### If "layer2" or "trace" (no path argument):
 1. Read flagged entry points from Layer 1
 2. For each flagged entry point, trace the complete user journey
 3. Document in `layer2-traces/flow-XXX.yaml`
 4. Identify gaps between expected and actual journeys
+
+### If "trace" with path argument (e.g., `trace "Dashboard → Add Item → Photo → Save"`):
+Targeted flow trace — trace a specific user journey described in natural language:
+1. Parse the path description into discrete steps (split on `→`, `->`, or `,`)
+2. For each step, identify the SwiftUI view, button, or action that triggers it:
+   - Search for view names, sheet triggers, navigation actions matching each step
+   - Use `grep -r` for button labels, sheet cases, navigation destinations
+3. Trace the complete code path step by step:
+   - File and line number for each transition
+   - State changes (sheet presentations, navigation, @State mutations)
+   - View transitions (what view appears at each step)
+4. At each step, check for issues:
+   - Is the expected next action visible without scrolling? (Buried Primary Action)
+   - Does the user have a forward path? (Dismiss Trap)
+   - Does the CTA match the destination scope? (Promise-Scope Mismatch)
+   - Is feedback shown on completion? (Missing Feedback)
+5. Document the trace and any issues found
+6. Output: Issue Rating Table for any findings, plus the step-by-step trace
 
 ### If "layer3" or "issues":
 1. Scan ALL entry points for common issues
@@ -148,6 +182,26 @@ Run all 5 layers sequentially, outputting findings to `.workflow-audit/` in the 
 5. Flag unwired integrations (e.g., Price Watch data exists but decision engine ignores it)
 6. Check platform parity (extension files, #if os() blocks, dismiss buttons)
 7. Output to `layer5-data-wiring.yaml`
+
+### If "diff":
+Compare current codebase against the previous audit to show what changed:
+1. Read existing `.workflow-audit/layer3-results.yaml` and `.workflow-audit/handoff.yaml`
+2. For each previously-reported issue, check if the referenced file + line still has the problem:
+   - Read the file at the reported line number
+   - Check if the problematic pattern still exists
+   - If fixed, mark as "RESOLVED"
+   - If file was modified but pattern persists, mark as "STILL OPEN"
+   - If file was deleted or moved, mark as "FILE CHANGED — verify manually"
+3. Run a quick scan for NEW issues not in the previous report (new files, new ScrollView+button combos, new sheets without handlers)
+4. Output a diff summary:
+   ```
+   Audit Diff: <previous date> → <current date>
+   ✅ Resolved: <count> issues fixed since last audit
+   🔴 Still Open: <count> issues remain
+   🆕 New: <count> new issues detected
+   📁 Changed: <count> files modified since audit (may need re-verification)
+   ```
+5. Show the full Issue Rating Table with a Status column prepended (✅/🔴/🆕)
 
 ### If "fix" or "fixes":
 1. Read `layer3-results.yaml` and `layer5-data-wiring.yaml` for unfixed issues
@@ -238,7 +292,7 @@ file_timestamps:
 issues:
   - id: <sequential number>
     finding: "<description>"
-    category: <dead_end|wrong_destination|mock_data|incomplete_navigation|missing_activation|unwired_data|platform_gap|promise_scope_mismatch|two_step_flow|missing_feedback|inconsistent_pattern|orphaned_code>
+    category: <dead_end|wrong_destination|mock_data|incomplete_navigation|missing_activation|unwired_data|platform_gap|promise_scope_mismatch|buried_primary_action|dismiss_trap|two_step_flow|missing_feedback|gesture_only_action|loading_state_trap|inconsistent_pattern|orphaned_code>
     urgency: <critical|high|medium|low>
     risk_fix: <critical|high|medium|low>
     risk_no_fix: <critical|high|medium|low>

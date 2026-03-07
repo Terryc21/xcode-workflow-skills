@@ -118,7 +118,75 @@ flow_trace:
 | 4 | aiAssistant | Two-step flow |
 | 5 | appleCareTracking | Two-step flow |
 
+## Targeted Flow Trace
+
+When invoked with a specific path (e.g., `trace "Dashboard → Add Item → Photo → Save"`),
+perform a focused trace of that exact user journey:
+
+### Process
+
+1. **Parse the path** — Split on `→`, `->`, or `,` into discrete steps
+2. **Identify each step** — For each step, find the SwiftUI view/button/action:
+   - Search for view names matching the step (e.g., "Dashboard" → `DashboardView`)
+   - Search for button labels (e.g., "Add Item" → `Button("Add Item")`)
+   - Search for sheet/navigation triggers (e.g., `activeSheet = .addItem`)
+3. **Trace transitions** — For each pair of consecutive steps:
+   - What code connects step N to step N+1?
+   - File and line number for the trigger
+   - State changes (sheet, navigation, @State)
+   - What view appears?
+4. **Check each step for issues** — Apply Layer 3 categories at each transition:
+   - Buried Primary Action: Is the next action visible without scrolling?
+   - Dismiss Trap: Can user only go back, not forward?
+   - Promise-Scope Mismatch: Does the CTA match what appears?
+   - Missing Feedback: Is completion confirmed?
+   - Gesture-Only: Is the trigger only a gesture?
+5. **Output** — Step-by-step trace with files/lines, plus Issue Rating Table for any findings
+
+### Targeted Trace Template
+
+```yaml
+targeted_trace:
+  path: "Dashboard → Add Item → Photo → Save"
+  date: "<ISO 8601>"
+
+  steps:
+    - step: 1
+      label: "Dashboard"
+      view: "DashboardView.swift"
+      action: "User sees dashboard with Add Item button"
+
+    - step: 2
+      label: "Add Item"
+      trigger: "showingAddItem = true"
+      file: "DashboardView.swift:145"
+      destination: "AddItemWithChooser.swift"
+      issues: []
+
+    - step: 3
+      label: "Photo"
+      trigger: "selectedFlow = .photoFlow"
+      file: "AddItemWithChooser.swift:67"
+      destination: "UnifiedPhotoFlow.swift"
+      issues:
+        - category: "buried_primary_action"
+          detail: "Continue button below source picker cards"
+
+    - step: 4
+      label: "Save"
+      trigger: "onComplete(prefillData, aiTask)"
+      file: "UnifiedPhotoFlow.swift:409"
+      destination: "AddItemFormView.swift"
+      issues: []
+
+  summary:
+    total_steps: 4
+    issues_found: 1
+    blocked: false
+```
+
 ## Output Artifacts
 
 - `layer2-traces/flow-XXX.yaml` - Individual flow traces
+- `layer2-traces/targeted-*.yaml` - Targeted flow traces
 - `layer2-summary.md` - Aggregated findings

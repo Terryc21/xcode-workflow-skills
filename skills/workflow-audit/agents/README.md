@@ -58,8 +58,12 @@ grep -r "\.contextMenu" Sources/ --include="*.swift"
 | Missing Auto-Activation | 🟠 HIGH | Expected mode/state not set |
 | Unwired Data | 🟠 HIGH | Real data exists but isn't used |
 | Platform Parity Gap | 🟠 HIGH | Feature works on iOS but not macOS |
+| Buried Primary Action | 🟠 HIGH | Primary button hidden below scroll fold |
+| Dismiss Trap | 🟠 HIGH | Only visible action is Cancel, no forward path |
 | Two-Step Flow | 🟡 MEDIUM | Intermediate selection required |
 | Missing Feedback | 🟡 MEDIUM | No confirmation of success |
+| Gesture-Only Action | 🟡 MEDIUM | Feature only accessible via swipe/long-press |
+| Loading State Trap | 🟡 MEDIUM | Spinner with no cancel/timeout/escape |
 | Inconsistent Pattern | 🟢 LOW | Same feature accessed differently |
 | Orphaned Code | 🟢 LOW | Feature exists but no entry point |
 
@@ -96,6 +100,30 @@ action: { selectedSection = .tools }
 // ❌ Bad - expected mode not activated
 action: { selectedSection = .myProducts }
 // Should also set: isSelectMode = true
+```
+
+**Primary action buried in ScrollView:**
+```swift
+// ❌ Bad - user must scroll past tall content to find Continue
+ScrollView {
+    VStack {
+        photos           // visible
+        sourceOptions    // 5-7 tall cards push button off screen
+        Button("Continue") { ... }
+            .buttonStyle(.borderedProminent)
+    }
+}
+
+// ✅ Good - button pinned outside ScrollView
+VStack(spacing: 0) {
+    ScrollView {
+        VStack { photos; sourceOptions }
+    }
+    Divider()
+    Button("Continue") { ... }
+        .buttonStyle(.borderedProminent)
+        .padding()
+}
 ```
 
 ## Files
@@ -168,6 +196,18 @@ This skill can be adapted to any SwiftUI project:
 ### 5. Data Integrity
 > Never show mock/hardcoded data when real user data exists.
 > If the model tracks it, the feature should use it.
+
+### 6. Primary Action Visibility
+> The primary action must be visible without scrolling after the user completes the key interaction.
+> Pin Save/Continue/Done buttons outside ScrollView or in toolbar. Never bury them below tall content.
+
+### 7. Escape Hatch
+> Every view must have a visible way to go forward OR back. Cancel alone is not enough after user completes a step.
+> If dismissing would lose work, provide both Cancel and a forward action.
+
+### 8. Gesture Discoverability
+> Every action available via gesture (swipe, long-press) should also be accessible via a visible button or menu.
+> Gestures are shortcuts, not the only path.
 
 ## Maintenance
 
