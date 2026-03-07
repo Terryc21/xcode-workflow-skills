@@ -44,6 +44,14 @@ After installing, open Claude Code in any Xcode project and type:
 
 You should see a list of all available skills. If the command isn't recognized, try restarting Claude Code.
 
+## Standalone Workflow Audit
+
+Just want the workflow audit skill? Install the lightweight standalone version (3 skills instead of 22):
+
+```bash
+claude plugin add Terryc21/workflow-audit
+```
+
 ## Skills
 
 ### Code Analysis & Review
