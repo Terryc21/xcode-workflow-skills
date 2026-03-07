@@ -161,20 +161,21 @@ Run all 5 layers sequentially, outputting findings to `.workflow-audit/` in the 
 
 ## Output Format
 
+> **CRITICAL FORMATTING RULE:** The Issue Rating Table below IS the output. Do NOT create separate sections for "Critical Issues", "Data Wiring Issues", "Recommendations", or any other vertical breakdown of findings. Every finding — navigation issues, data wiring issues, orphaned code, missing feedback, design violations — goes into ONE table as ONE row. Context goes in the Finding column. No exceptions.
+
 After completing the audit, provide:
 
-1. **Summary** - Total entry points, issues by severity
-2. **Issue Rating Table** - All findings in standardized table format (see below)
-3. **Critical Issues** - Any blocking problems (detail)
-4. **Data Wiring Issues** - Features using mock data or ignoring real data
-5. **Recommendations** - Prioritized fix list
-6. **Next Steps** - What to do next
+1. **One-line summary** — entry point count, issue count by severity (one sentence, not a section)
+2. **Issue Rating Table** — every finding in a single table (see below)
+3. **One-line next step** — suggest `/plan --workflow-audit` if fixes are needed
+
+That's it. Three items. No other sections.
 
 ### Issue Rating Table
 
 > **Reference:** See `skills/shared/rating-system.md` for full column definitions, indicator scale, and sorting rules.
 
-**Hard formatting rule — Table, not list:** ALL findings MUST be in a single markdown table. Each finding is ONE ROW. Ratings are COLUMNS read left-to-right. Never expand findings into individual sections with bullet-pointed ratings. See the shared reference for correct vs wrong examples.
+**Hard formatting rule — Table, not list:** ALL findings MUST be in a single markdown table. Each finding is ONE ROW. Ratings are COLUMNS read left-to-right. Never expand findings into individual sections, vertical blocks, or bullet-pointed ratings. Do NOT create separate headed sections for categories of findings (e.g., "Data Wiring Issues", "Critical Issues", "Orphaned Views"). ALL categories go in the same table. The Finding column carries the context.
 
 All findings MUST be presented in this format, sorted by Urgency then ROI:
 
