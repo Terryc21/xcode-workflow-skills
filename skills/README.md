@@ -29,6 +29,6 @@ For installation instructions, usage, and the full skill reference, see the [roo
 | `tech-talk-reportcard` | `/tech-talk-reportcard` | Technical codebase analysis with A-F grades |
 | `ui-scan` | `/ui-scan` | UI test setup and accessibility scan |
 | `update-website` | `/update-website` | Sync website with app changes |
-| `workflow-audit` | `/workflow-audit` | UI workflow audit from user perspective |
+| `workflow-audit` | `/workflow-audit` | 5-layer UI workflow audit with 16 issue categories, targeted flow tracing, and diff mode |
 
 The `shared/` directory contains reference documents used by multiple skills (rating system, etc.).

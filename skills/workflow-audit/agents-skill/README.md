@@ -125,6 +125,19 @@ action: {
 
 If "Export" is available via sheet in one place and navigation in another, users get confused. Standardize.
 
+### 5. Data Integrity
+> Never show mock/hardcoded data when real user data exists.
+
+### 6. Primary Action Visibility
+> The primary action must be visible without scrolling after the user completes the key interaction.
+> Pin Save/Continue/Done buttons outside ScrollView or in toolbar.
+
+### 7. Escape Hatch
+> Every view must have a visible way to go forward OR back. Cancel alone is not enough after completing a step.
+
+### 8. Gesture Discoverability
+> Every action available via gesture (swipe, long-press) should also be accessible via a visible button or menu.
+
 ## Files in This Skill
 
 ```
@@ -158,8 +171,8 @@ workflow-audit-skill/
 | Severity | User Impact | Example |
 |----------|-------------|---------|
 | 🔴 **Critical** | Cannot complete goal, fake data | Dead end, mock data, placeholder AI |
-| 🟠 **High** | Extra steps, missing data, broken platform | Unwired data, platform parity gap |
-| 🟡 **Medium** | Friction but completable | Intermediate picker, simplified logic |
+| 🟠 **High** | Extra steps, missing data, broken platform | Unwired data, buried buttons, dismiss traps, platform parity gap |
+| 🟡 **Medium** | Friction but completable | Gesture-only actions, loading traps, intermediate picker |
 | 🟢 **Low** | Minor polish | Inconsistent wording, missing feedback |
 
 ## Integration with Other Audits
