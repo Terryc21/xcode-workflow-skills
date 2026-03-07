@@ -17,10 +17,11 @@ A [Claude Code](https://docs.anthropic.com/en/docs/claude-code) plugin with 22 w
 Open your terminal and run:
 
 ```bash
-claude plugin add Terryc21/xcode-workflow-skills
+claude plugin marketplace add Terryc21/xcode-workflow-skills
+claude plugin install xcode-workflow-skills
 ```
 
-Claude Code will download the plugin automatically. All 22 skills are immediately available as slash commands in any project.
+The first command adds the repo as a marketplace. The second installs the plugin. All 22 skills are immediately available as slash commands in any project.
 
 ### Option 2: Install from a local copy
 
@@ -30,8 +31,9 @@ If you prefer to clone the repo first (useful if you want to browse or customize
 # Clone the repository
 git clone https://github.com/Terryc21/xcode-workflow-skills.git
 
-# Install the local copy as a plugin
-claude plugin add ./xcode-workflow-skills
+# Add the local copy as a marketplace and install
+claude plugin marketplace add ./xcode-workflow-skills
+claude plugin install xcode-workflow-skills
 ```
 
 ### Verify installation
@@ -49,7 +51,8 @@ You should see a list of all available skills. If the command isn't recognized, 
 Just want the workflow audit skill? Install the lightweight standalone version (3 skills instead of 22):
 
 ```bash
-claude plugin add Terryc21/workflow-audit
+claude plugin marketplace add Terryc21/workflow-audit
+claude plugin install workflow-audit
 ```
 
 ## Skills
