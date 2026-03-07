@@ -194,6 +194,24 @@ evaluation:
 > - "Bulk Actions" → Enter Select mode
 > - "Expiring Soon" → Filter to expiring items
 
+### Design Principle: Primary Action Visibility
+> The primary action must be visible without scrolling after the user completes the key interaction.
+> Pin Save/Continue/Done outside the ScrollView or in toolbar.
+> - Photo selected → "Continue" immediately visible
+> - Conflict reviewed → "Resolve" pinned at bottom
+
+### Design Principle: Escape Hatch
+> Every view must have a visible way to go forward OR back. Cancel alone is not enough.
+> After completing a step, the user must see a forward path — not just Cancel.
+> - Photo selected → "Continue" visible (not just Cancel)
+> - Form filled → "Save" visible (not just back navigation)
+
+### Design Principle: Gesture Discoverability
+> Every action available via gesture should also be accessible via a visible button or menu.
+> Gestures are accelerators for power users, not the primary interface.
+> - Swipe-to-delete → also available in edit mode or context menu
+> - Long-press actions → also available via toolbar menu or action button
+
 ## Integration with Layers 1-3
 
 | Layer | Finds | Example |
