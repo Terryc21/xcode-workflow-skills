@@ -45,6 +45,12 @@ The table format lets you compare all findings at a glance. The vertical list fo
 
 ---
 
+## Display Requirements
+
+> **Terminal width:** The 8-column rating table requires a wide terminal to render correctly. If the table appears as vertical blocks instead of horizontal rows, widen your terminal window or use full-screen mode.
+
+---
+
 ## Column Definitions
 
 | Column | Meaning |
