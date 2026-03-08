@@ -457,6 +457,77 @@ HStack {
 
 **Severity:** 🟢 MEDIUM (user trapped if operation hangs; rare but frustrating)
 
+### Category 17: Context Dropping
+Navigation path has item/context available at the source but drops it before reaching
+the destination. The destination supports receiving context (has a contextual initializer)
+but gets the parameterless version instead.
+
+Different from "Promise-Scope Mismatch" (destination is correct but too broad) and
+"Platform Parity Gap" (entire feature broken). Context Dropping means the right destination
+is opened but without the context the user expects to carry through.
+
+**Detection patterns:**
+```swift
+// ❌ Platform parity: iOS passes context, macOS notification drops it
+// iOS path:
+.sheet(isPresented: $showFeature) {
+    FeatureView(item: item, existingData: data, itemID: item.persistentModelID)
+}
+// macOS path:
+let context: [String: Any] = [
+    "item": item.title,
+    "existingData": data
+    // ❌ Missing "itemID" — iOS passes it, macOS doesn't
+]
+NotificationCenter.default.post(name: .navigateToFeature, userInfo: context)
+
+// ❌ Navigation context struct missing fields the destination accepts
+struct FeatureNavigationContext {
+    let name: String
+    let data: [Data]
+    // ❌ Missing: itemID that FeatureView accepts as optional param
+}
+
+// ❌ Button has item in scope but destination gets no parameters
+Button("Scout This Item") {
+    showStuffScout = true  // opens StuffScoutView() with no item context
+}
+// When StuffScoutView(productName:existingImages:) exists
+
+// ❌ Notification sender omits fields that receiver can parse
+// Sender builds dict with 4 keys, receiver struct has 5 properties
+```
+
+**Safe patterns (do NOT flag):**
+```swift
+// ✅ All destination parameters passed on all platforms
+// iOS sheet and macOS notification both include the same fields
+
+// ✅ Parameterless init is intentional (fresh/empty state)
+Button("New Scout") {
+    showStuffScout = true  // intentionally opens fresh scan
+}
+
+// ✅ Context struct matches notification sender 1:1
+```
+
+**How to detect programmatically:**
+1. Find views with platform-split presentation (`#if os(iOS) .sheet` / `#else .onChange`)
+2. Compare parameters passed in each platform path
+3. Find `NavigationContext` structs and compare their properties with the destination view's init parameters
+4. Find buttons that set a `show*` flag where the destination view has both parameterless and contextual inits — check which is used
+5. For NotificationCenter patterns: compare `userInfo` dictionary keys with the context struct's `init?(from:)` parsing
+
+**Real example (caught in Stuffolio v1.0):**
+- Source: AI Product Assistant "Stuff Scout" button (item in scope)
+- iOS: passes `existingItemID: item.persistentModelID` to StuffScoutView
+- macOS: notification `userInfo` omitted `existingItemID`
+- `StuffScoutNavigationContext` struct had no `existingItemID` property
+- Result: macOS Stuff Scout opened without item tracking, couldn't link results back to item
+- Fix: Added `existingItemID` to notification dict, context struct, and destination init call
+
+**Severity:** 🟡 HIGH (user loses context they expect to carry through; may cause data loss or broken feature)
+
 ## Detection Process
 
 ### Step 1: Entry Point Audit
@@ -620,6 +691,30 @@ grep -B5 -A5 "ProgressView" Sources/ --include="*.swift" \
 # Check if async operation has timeout/cancellation
 ```
 
+### Check 9: Context Dropping
+```bash
+# Step 1: Find platform-split presentations (iOS sheet vs macOS notification)
+grep -rn "#if os(iOS)" Sources/ --include="*.swift" \
+  | xargs -I{} grep -l "\.sheet\|\.fullScreenCover" {} 2>/dev/null
+
+# Step 2: For each, find the macOS #else block and compare parameters
+# Look for NotificationCenter.post with userInfo dict
+grep -B2 -A15 "NotificationCenter.default.post" Sources/ --include="*.swift" \
+  | grep -E "userInfo|let context"
+
+# Step 3: Find NavigationContext structs and list their properties
+grep -rn "NavigationContext\|NavigationInfo" Sources/ --include="*.swift"
+
+# Step 4: Compare context struct properties with destination view init params
+# Find views that accept both parameterless and contextual inits
+grep -rn "init(productName\|init(item\|init(context" Sources/ --include="*.swift"
+
+# Step 5: Find show* flags set from item-context closures where destination
+# uses parameterless init
+grep -B10 "show.*= true" Sources/ --include="*.swift" \
+  | grep -E "item\.|onItemSelected"
+```
+
 ## Integration with Layer 2
 
 Layer 3 uses Layer 2 traces as examples but scales to all entry points:
@@ -646,3 +741,4 @@ Layer 3 is complete when:
 10. Dismiss traps identified (views with only Cancel and no forward path)
 11. Gesture-only actions identified (features only in swipe/context menu)
 12. Loading state traps identified (blocking spinners with no cancel/timeout)
+13. Context dropping identified (navigation paths that lose item/context between platforms or via notifications)
