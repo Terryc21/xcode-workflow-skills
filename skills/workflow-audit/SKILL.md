@@ -82,6 +82,7 @@ For templates and examples:
 | Missing Feedback | 🟢 MEDIUM | No confirmation of success |
 | Gesture-Only Action | 🟢 MEDIUM | Feature only accessible via swipe/long-press |
 | Loading State Trap | 🟢 MEDIUM | Spinner with no cancel/timeout/escape |
+| Context Dropping | 🟡 HIGH | Navigation path loses item context between platforms or via notifications |
 | Inconsistent Pattern | ⚪ LOW | Same feature accessed differently |
 | Orphaned Code | ⚪ LOW | Feature exists but no entry point |
 
