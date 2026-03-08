@@ -58,12 +58,17 @@ grep -r "\.contextMenu" Sources/ --include="*.swift"
 | Missing Auto-Activation | 🟠 HIGH | Expected mode/state not set |
 | Unwired Data | 🟠 HIGH | Real data exists but isn't used |
 | Platform Parity Gap | 🟠 HIGH | Feature works on iOS but not macOS |
+| Promise-Scope Mismatch | 🟠 HIGH | Specific CTA opens generic/broad destination |
 | Buried Primary Action | 🟠 HIGH | Primary button hidden below scroll fold |
 | Dismiss Trap | 🟠 HIGH | Only visible action is Cancel, no forward path |
+| Context Dropping | 🟠 HIGH | Navigation path loses item context between platforms |
+| Notification Nav Fragility | 🟠 HIGH | Untyped NotificationCenter dict for navigation |
+| Sheet Presentation Asymmetry | 🟠 HIGH | Different mechanisms per platform for same feature |
 | Two-Step Flow | 🟡 MEDIUM | Intermediate selection required |
 | Missing Feedback | 🟡 MEDIUM | No confirmation of success |
 | Gesture-Only Action | 🟡 MEDIUM | Feature only accessible via swipe/long-press |
 | Loading State Trap | 🟡 MEDIUM | Spinner with no cancel/timeout/escape |
+| Stale Navigation Context | 🟡 MEDIUM | Cached context with no clearing mechanism |
 | Inconsistent Pattern | 🟢 LOW | Same feature accessed differently |
 | Orphaned Code | 🟢 LOW | Feature exists but no entry point |
 
