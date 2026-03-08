@@ -902,6 +902,43 @@ grep -rn "\.onReceive\|publisher(for:" Sources/ --include="*.swift" \
 # - Any string key used in sender that doesn't appear in receiver (or vice versa)
 ```
 
+### Check 10b: Notification Type-Safety (sub-check of Check 10)
+```bash
+# This sub-check cross-references the SAME userInfo key across senders and receivers
+# to detect type mismatches that compile silently but fail at runtime.
+
+# Step 1: Extract all userInfo key-value pairs from senders
+# Look for dictionary literals in NotificationCenter.post calls
+grep -B2 -A20 "NotificationCenter.default.post" Sources/ --include="*.swift" -rn \
+  | grep -E '"[a-zA-Z]+":' > /tmp/sender_keys.txt
+
+# Step 2: Extract all userInfo key casts from receivers
+# Look for `as? Type` patterns in .onReceive handlers or init?(from userInfo:)
+grep -B2 -A10 "userInfo\?" Sources/ --include="*.swift" -rn \
+  | grep -E '"[a-zA-Z]+".*as\?' > /tmp/receiver_casts.txt
+
+# Step 3: For each key that appears in BOTH sender and receiver:
+# Compare the type being sent vs the type being cast
+# Example mismatch:
+#   Sender:   "itemID": item.persistentModelID    (PersistentIdentifier)
+#   Receiver: info["itemID"] as? String            (String)
+#   → CRITICAL: silent nil, navigation silently broken
+
+# Step 4: Flag mismatches where:
+# - Sender puts a PersistentIdentifier, receiver casts as? String (or vice versa)
+# - Sender puts an Int, receiver casts as? String
+# - Sender uses `as Any` type erasure (increases mismatch risk)
+# - Sender key name doesn't appear in any receiver (orphaned key)
+# - Receiver key name doesn't appear in any sender (will always be nil)
+```
+
+**What this catches:**
+- The critical MenuBarView bug: sender puts `PersistentIdentifier`, receiver casts `as? String` → silent nil
+- Orphaned keys sent but never read (e.g., `resultId` sent but receiver looks for `queryId`)
+- Missing keys expected by receiver but never sent
+
+**Severity:** 🔴 CRITICAL (type mismatches cause silent navigation failures with no error)
+
 ### Check 11: Sheet Presentation Asymmetry
 ```bash
 # Step 1: Find files with platform-conditional sheet presentations
@@ -943,6 +980,40 @@ grep -rn "@State.*private.*var.*Context" Sources/ --include="*.swift" \
 grep -rn "PersistentIdentifier" Sources/ --include="*.swift" \
   | grep -i "context\|navigation"
 ```
+
+### Check 13: Simulated Delay (Mock Data Signal)
+```bash
+# Step 1: Find Task.sleep or asyncAfter in feature views (not tests/previews)
+grep -rn "Task\.sleep\|asyncAfter" Sources/ --include="*.swift" \
+  | grep -v "Test\|Preview\|#Preview" \
+  | grep -v "// animation\|// dismiss\|// sheet" > /tmp/delay_sites.txt
+
+# Step 2: For each delay site, check if the next 10 lines set a hardcoded value
+# Look for patterns like: self.result = HardcodedValue, self.suggestions = [...]
+while IFS=: read -r file line _; do
+  sed -n "$((line+1)),$((line+10))p" "$file" \
+    | grep -q "= \[.*\]\|= .*(\|= \".*\"\|= true\|= false\|\.result =\|\.suggestion" \
+    && echo "SIMULATED: $file:$line"
+done < /tmp/delay_sites.txt
+
+# Step 3: Exclude legitimate uses:
+# - Task.sleep for animation timing (< 0.5s, near dismiss/animation code)
+# - asyncAfter for sheet presentation sequencing
+# - Delays before network/API calls (real fetch follows)
+# Flag: delay + hardcoded data assignment WITHOUT any network/API call between them
+```
+
+**What this catches:**
+- `Task.sleep(for: .seconds(1))` followed by `self.aiResult = templateMatch()` (fake AI)
+- `asyncAfter(deadline: .now() + 1.5)` followed by `self.data = [HardcodedItem(...)]` (fake fetch)
+- Any delay used to simulate loading when the "loaded" data is actually local/hardcoded
+
+**What to exclude:**
+- Sheet dismissal sequencing (`activeSheet = nil; try await Task.sleep; showNext = true`)
+- Animation timing (delays < 0.3s near UI transitions)
+- Delays before real async calls (`try await Task.sleep; let result = await api.fetch()`)
+
+**Severity:** 🟢 MEDIUM to 🔴 CRITICAL (depends on whether users see the fake data as real)
 
 ## Regression Canaries
 
@@ -1054,3 +1125,4 @@ Layer 3 is complete when:
 15. Sheet presentation asymmetry flagged (different mechanisms per platform for same feature)
 16. Stale navigation context identified (cached context with no clearing mechanism)
 17. Regression canaries generated for each fix (stored in `.workflow-audit/canaries.yaml`)
+18. Simulated delay patterns identified (Task.sleep/asyncAfter before hardcoded data assignment)
