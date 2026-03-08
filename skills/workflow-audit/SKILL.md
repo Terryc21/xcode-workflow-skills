@@ -83,6 +83,9 @@ For templates and examples:
 | Gesture-Only Action | 🟢 MEDIUM | Feature only accessible via swipe/long-press |
 | Loading State Trap | 🟢 MEDIUM | Spinner with no cancel/timeout/escape |
 | Context Dropping | 🟡 HIGH | Navigation path loses item context between platforms or via notifications |
+| Notification Nav Fragility | 🟡 HIGH | Untyped NotificationCenter dict used for navigation context |
+| Sheet Presentation Asymmetry | 🟡 HIGH | Different presentation mechanisms per platform for same feature |
+| Stale Navigation Context | 🟢 MEDIUM | Cached context with no clearing/validation mechanism |
 | Inconsistent Pattern | ⚪ LOW | Same feature accessed differently |
 | Orphaned Code | ⚪ LOW | Feature exists but no entry point |
 

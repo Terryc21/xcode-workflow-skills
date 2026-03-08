@@ -528,6 +528,173 @@ Button("New Scout") {
 
 **Severity:** 🟡 HIGH (user loses context they expect to carry through; may cause data loss or broken feature)
 
+### Category 18: Notification Navigation Fragility
+Navigation between views uses `NotificationCenter` with untyped `[String: Any]` dictionaries
+instead of typed function calls, bindings, or environment values. Any key typo, type mismatch,
+or omitted field is silent at compile time and only manifests as a runtime bug.
+
+This is a **root cause pattern** — it enables Context Dropping (Category 17) and Platform
+Parity Gaps (Category 12). Flagging it proactively prevents those downstream issues.
+
+**Detection patterns:**
+```swift
+// ❌ Untyped dictionary for navigation context
+let context: [String: Any] = [
+    "productName": item.title,
+    "manufacturer": item.manufacturer as Any,  // as Any = type erasure
+    "category": item.productCategory?.label as Any
+]
+NotificationCenter.default.post(name: .navigateToFeature, userInfo: context)
+
+// ❌ Receiver parses with string keys — typo = silent nil
+init?(from userInfo: [AnyHashable: Any]?) {
+    guard let info = userInfo,
+          let name = info["productName"] as? String else { return nil }
+    // "produtName" typo would silently return nil
+}
+
+// ❌ Adding a new field requires updating sender AND receiver in sync
+// No compiler enforcement that they match
+```
+
+**Safe patterns (do NOT flag):**
+```swift
+// ✅ Typed callback/closure
+let onNavigateToScout: (Item, [Data]) -> Void
+
+// ✅ Environment-based navigation
+@Environment(\.navigateToScout) var navigateToScout
+
+// ✅ Binding-based state change
+@Binding var selectedSection: AppSection
+
+// ✅ Notification used for non-navigation purposes (sync events, refresh triggers)
+NotificationCenter.default.post(name: .dataDidSync, object: nil)
+```
+
+**How to detect programmatically:**
+1. Find all `NotificationCenter.default.post` calls with `userInfo` that isn't nil
+2. Check if the notification name contains navigation-related keywords (navigate, show, open, present)
+3. Find the corresponding receiver (`.onReceive` or `publisher(for:)`)
+4. Flag as fragility risk — recommend typed alternative
+
+**Severity:** 🟡 HIGH (silent bugs, no compiler safety, enables downstream issues)
+
+### Category 19: Sheet Presentation Asymmetry
+Same feature uses fundamentally different presentation mechanisms on different platforms —
+e.g., iOS uses `.sheet` with direct view init, macOS uses NotificationCenter → navigation.
+The two paths are maintained independently and drift apart over time.
+
+Different from "Platform Parity Gap" (feature broken on one platform) — here both platforms
+work, but the different mechanisms create a maintenance burden and context-dropping risk.
+
+**Detection patterns:**
+```swift
+// ❌ Completely different presentation mechanisms per platform
+#if os(iOS)
+.sheet(isPresented: $showFeature) {
+    FeatureView(param1: a, param2: b, param3: c)
+}
+#else
+.onChange(of: showFeature) { _, new in
+    if new {
+        NotificationCenter.default.post(name: .navigate, userInfo: [...])
+        dismiss()
+    }
+}
+#endif
+
+// ❌ iOS uses sheet, macOS uses inline navigation
+// Parameters must be maintained in two completely different formats:
+// iOS: direct init params
+// macOS: [String: Any] dict → context struct → init params
+```
+
+**Safe patterns (do NOT flag):**
+```swift
+// ✅ Same mechanism, minor platform differences
+.sheet(isPresented: $showFeature) {
+    FeatureView(item: item)
+        #if os(iOS)
+        .navigationBarTitleDisplayMode(.inline)
+        #endif
+}
+
+// ✅ Platform-specific STYLING, not mechanism
+#if os(iOS)
+.sheet(isPresented: $show) { FeatureView(item: item) }
+#else
+.sheet(isPresented: $show) { FeatureView(item: item).frame(width: 500) }
+#endif
+```
+
+**How to detect programmatically:**
+1. Find `#if os(iOS)` blocks that contain `.sheet` or `.fullScreenCover`
+2. Check if the `#else` block uses a different mechanism (notification, navigation, binding)
+3. If the presentation mechanism differs fundamentally → flag
+4. Compare parameter counts between the two paths
+
+**Real example (Stuffolio v1.0):**
+- AI Product Assistant "Stuff Scout" button
+- iOS: `.sheet { StuffScoutView(productName:manufacturer:category:existingImages:existingItemID:) }` — 5 params
+- macOS: `NotificationCenter.post(userInfo: [...])` → context struct → init — started with 4 params, missed `existingItemID`
+- The asymmetry caused Context Dropping on macOS
+
+**Severity:** 🟡 HIGH (maintenance burden, drift risk, enables context dropping)
+
+### Category 20: Stale Navigation Context
+A view stores navigation context in `@State` for later use, but the context can become
+stale — the source item could be deleted, modified, or the context may never be cleared.
+
+**Detection patterns:**
+```swift
+// ❌ Cached context with no clearing mechanism
+@State private var featureContext: FeatureNavigationContext?
+// Never set to nil after use or on disappear
+
+// ❌ Context cached but source item can be deleted
+@State private var stuffScoutContext: StuffScoutNavigationContext?
+// If the user deletes the item while Scout is open, context points to deleted item
+
+// ❌ Context persists across navigation changes
+// User navigates away and back — stale context from previous visit is reused
+selectedSection = .stuffScout  // uses old stuffScoutContext
+
+// ❌ Context set in onReceive but only cleared in onDisappear
+// If notification fires twice, second context overwrites first silently
+.onReceive(notification) { stuffScoutContext = parse($0) }
+```
+
+**Safe patterns (do NOT flag):**
+```swift
+// ✅ Context cleared after use
+.onDisappear { featureContext = nil }
+
+// ✅ Context cleared when navigating away
+.onChange(of: selectedSection) { _, new in
+    if new != .stuffScout { stuffScoutContext = nil }
+}
+
+// ✅ Context is a computed property (always fresh)
+var featureContext: FeatureContext? {
+    guard let item = selectedItem else { return nil }
+    return FeatureContext(item: item)
+}
+
+// ✅ Context validated before use
+if let context = stuffScoutContext, modelContext.model(for: context.itemID) != nil {
+    FeatureView(context: context)
+}
+```
+
+**How to detect programmatically:**
+1. Find `@State` properties with `Context`, `NavigationContext`, or `Info` in the type name
+2. Check if the property is set to nil somewhere (`.onDisappear`, `.onChange`, explicit reset)
+3. If no clearing mechanism exists → flag as stale context risk
+4. Check if the context references a `PersistentIdentifier` or model ID without validating it still exists
+
+**Severity:** 🟢 MEDIUM (edge case but can cause crashes or stale data display)
+
 ## Detection Process
 
 ### Step 1: Entry Point Audit
@@ -715,6 +882,147 @@ grep -B10 "show.*= true" Sources/ --include="*.swift" \
   | grep -E "item\.|onItemSelected"
 ```
 
+### Check 10: Notification Navigation Fragility
+```bash
+# Step 1: Find NotificationCenter posts with userInfo (navigation-related)
+grep -rn "NotificationCenter.default.post" Sources/ --include="*.swift" \
+  | grep -v "object: nil)" \
+  | grep -i "userInfo"
+
+# Step 2: Find the notification names used for navigation
+grep -rn "\.requestNavigate\|\.navigateTo\|\.showFeature\|\.openSection" Sources/ --include="*.swift"
+
+# Step 3: Find corresponding receivers
+grep -rn "\.onReceive\|publisher(for:" Sources/ --include="*.swift" \
+  | grep -i "navigate\|show\|open"
+
+# Step 4: For each sender/receiver pair, compare:
+# - Number of keys in sender's userInfo dict
+# - Number of properties parsed in receiver's init/handler
+# - Any string key used in sender that doesn't appear in receiver (or vice versa)
+```
+
+### Check 11: Sheet Presentation Asymmetry
+```bash
+# Step 1: Find files with platform-conditional sheet presentations
+grep -rn "#if os(iOS)" Sources/ --include="*.swift" \
+  | cut -d: -f1 | sort -u > /tmp/platform_split.txt
+
+# Step 2: For each, check if iOS uses .sheet and macOS uses a different mechanism
+for f in $(cat /tmp/platform_split.txt); do
+  ios_sheet=$(grep -c "\.sheet\|\.fullScreenCover" "$f" 2>/dev/null || echo 0)
+  notification=$(grep -c "NotificationCenter.default.post" "$f" 2>/dev/null || echo 0)
+  if [ "$ios_sheet" -gt 0 ] && [ "$notification" -gt 0 ]; then
+    echo "ASYMMETRY: $f (iOS sheet + macOS notification)"
+  fi
+done
+
+# Step 3: For asymmetric files, count parameters in each path
+# iOS: count arguments in View init call inside .sheet { }
+# macOS: count keys in userInfo dictionary
+```
+
+### Check 12: Stale Navigation Context
+```bash
+# Step 1: Find @State properties with Context/Info types
+grep -rn "@State.*private.*var.*[Cc]ontext\|@State.*private.*var.*[Ii]nfo\|@State.*private.*var.*[Nn]avigation" \
+  Sources/ --include="*.swift"
+
+# Step 2: For each, check if it's ever set to nil
+# Extract variable name, then search for "varName = nil"
+grep -rn "@State.*private.*var.*Context" Sources/ --include="*.swift" \
+  | while IFS=: read -r file line content; do
+    varname=$(echo "$content" | sed 's/.*var \([a-zA-Z]*\).*/\1/')
+    has_clear=$(grep -c "$varname = nil" "$file" 2>/dev/null || echo 0)
+    if [ "$has_clear" -eq 0 ]; then
+      echo "STALE RISK: $file:$line — $varname never set to nil"
+    fi
+  done
+
+# Step 3: Check if context references PersistentIdentifier without validation
+grep -rn "PersistentIdentifier" Sources/ --include="*.swift" \
+  | grep -i "context\|navigation"
+```
+
+## Regression Canaries
+
+After fixing a workflow issue, generate a "canary" — a specific check that detects if the
+issue recurs. Canaries are stored in `.workflow-audit/canaries.yaml` and can be run as a
+quick regression check before release.
+
+### Canary Format
+
+```yaml
+canaries:
+  - id: "canary-001"
+    issue_ref: "issue-017"  # original issue ID
+    description: "StuffScoutNavigationContext must include existingItemID"
+    check_type: "grep_match"
+    file: "Sources/Views/Navigation/AppNavigationView.swift"
+    pattern: "existingItemID.*PersistentIdentifier"
+    expect: "match"  # fail if pattern NOT found
+    added: "2026-03-08"
+
+  - id: "canary-002"
+    issue_ref: "issue-017"
+    description: "macOS notification must include existingItemID key"
+    check_type: "grep_match"
+    file: "Sources/AI_Backend/AIProductAssistantView.swift"
+    pattern: "existingItemID.*persistentModelID"
+    expect: "match"
+    added: "2026-03-08"
+
+  - id: "canary-003"
+    issue_ref: "issue-013"
+    description: "Continue button must appear before sourcePickerContent in UnifiedPhotoFlow"
+    check_type: "line_order"
+    file: "Sources/Features/ItemManagement/Views/UnifiedPhotoFlow.swift"
+    first_pattern: "Continue with AI Analysis"
+    second_pattern: "sourcePickerContent"
+    expect: "first_before_second"
+    added: "2026-03-08"
+```
+
+### Canary Check Types
+
+| Type | Description | Pass condition |
+|------|-------------|----------------|
+| `grep_match` | Pattern must exist in file | Pattern found |
+| `grep_absent` | Pattern must NOT exist in file | Pattern not found |
+| `line_order` | Two patterns must appear in specific order | First before second |
+| `param_count` | Count params in a function/dict | Count matches expected |
+| `platform_parity` | Same pattern must exist in both iOS and macOS blocks | Found in both |
+
+### Running Canaries
+
+```bash
+# Quick canary check — run all canaries against current source
+# Each canary is a simple grep/awk check that takes <1 second
+
+for canary in $(yq '.canaries[].id' .workflow-audit/canaries.yaml); do
+  file=$(yq ".canaries[] | select(.id == \"$canary\") | .file" .workflow-audit/canaries.yaml)
+  pattern=$(yq ".canaries[] | select(.id == \"$canary\") | .pattern" .workflow-audit/canaries.yaml)
+  expect=$(yq ".canaries[] | select(.id == \"$canary\") | .expect" .workflow-audit/canaries.yaml)
+
+  if [ "$expect" = "match" ]; then
+    grep -q "$pattern" "$file" && echo "✅ $canary" || echo "❌ $canary REGRESSION"
+  elif [ "$expect" = "absent" ]; then
+    grep -q "$pattern" "$file" && echo "❌ $canary REGRESSION" || echo "✅ $canary"
+  fi
+done
+```
+
+### When to Generate Canaries
+
+The workflow-audit `fix` command should automatically generate a canary for each fix:
+
+1. After fixing a Context Dropping issue → canary verifying the field exists in both paths
+2. After fixing a Buried Primary Action → canary verifying button order
+3. After fixing a Platform Parity Gap → canary verifying pattern exists on both platforms
+4. After fixing a Dismiss Trap → canary verifying forward action exists
+
+Canaries are **additive** — they accumulate over time and form a regression safety net.
+
 ## Integration with Layer 2
 
 Layer 3 uses Layer 2 traces as examples but scales to all entry points:
@@ -742,3 +1050,7 @@ Layer 3 is complete when:
 11. Gesture-only actions identified (features only in swipe/context menu)
 12. Loading state traps identified (blocking spinners with no cancel/timeout)
 13. Context dropping identified (navigation paths that lose item/context between platforms or via notifications)
+14. Notification navigation fragility flagged (untyped NotificationCenter used for navigation)
+15. Sheet presentation asymmetry flagged (different mechanisms per platform for same feature)
+16. Stale navigation context identified (cached context with no clearing mechanism)
+17. Regression canaries generated for each fix (stored in `.workflow-audit/canaries.yaml`)
