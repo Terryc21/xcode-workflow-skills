@@ -109,7 +109,7 @@ claude plugin install workflow-audit
 
 | Command | Description | When to Use |
 |---------|-------------|-------------|
-| `/workflow-audit` | 5-layer UI workflow audit with 16 issue categories: discover entry points, trace user flows, detect dead ends, buried buttons, dismiss traps, gesture-only actions, loading traps, and evaluate data wiring. Includes targeted flow tracing and diff mode. | Auditing SwiftUI navigation, finding abandoned flows, and validating user journeys. |
+| `/workflow-audit` | 5-layer UI workflow audit with 20 issue categories and 12 automated checks: discover entry points, trace user flows, detect dead ends, buried buttons, dismiss traps, context dropping, notification fragility, sheet asymmetry, stale context, and more. Includes regression canaries, targeted flow tracing, and diff mode. | Auditing SwiftUI navigation, finding abandoned flows, and validating user journeys. |
 
 ### Reference
 
