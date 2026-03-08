@@ -31,13 +31,18 @@ grep -r "selectedSection = \." Sources/ --include="*.swift"
 grep -r "\.contextMenu" Sources/ --include="*.swift"
 ```
 
-### 2. Check Layer 3 Automated Tests
+### 2. Check Layer 3 Automated Tests (14 checks)
 ```bash
 # Sheet coverage: all enum cases should have handlers
 # Compare DashboardSheetType cases vs sheetContent(for:) handlers
 
 # Orphan check: views should be instantiated somewhere
 # grep for "struct XxxView: View" then verify usage
+
+# Notification type-safety (Check 10b): cross-reference userInfo keys
+# across senders/receivers for type mismatches
+
+# Simulated delay (Check 13): Task.sleep/asyncAfter before hardcoded data
 ```
 
 ### 3. Review Outputs
@@ -151,23 +156,16 @@ VStack(spacing: 0) {
 └── layer5-data-wiring.md          # Data wiring methodology
 ```
 
-## Results Summary (Stuffolio v1.0)
+## Results Summary (Stuffolio v1.0 Build 25)
 
-### Issues Found: 8
+### Issues Found: 14
 
-| Severity | Count | Key Issue |
-|----------|-------|-----------|
-| 🔴 Critical | 1 | Repair Advisor dead end |
-| 🟠 High | 3 | Price Watch scroll, Bulk Actions mode, duplicate code |
-| 🟡 Medium | 2 | Two-step flows, inconsistent patterns |
-| 🟢 Low | 2 | Missing feedback (edge cases), orphaned code |
-
-### Recommended Fix Order
-
-1. **Bulk Actions** (5 min) - Change to `activeSheet = .bulkEdit`
-2. **Price Watch** (15 min) - Add sheet type, use `activeSheet`
-3. **Repair Advisor** (2-3 hrs) - Create `DamagedItemsPickerSheet`
-4. **Duplicate code** (30 min) - Remove redundant `@ViewBuilder` cards
+| Severity | Count | Key Issues |
+|----------|-------|------------|
+| 🔴 Critical | 1 | MenuBarView PersistentIdentifier vs String type mismatch |
+| 🟡 High | 3 | macOS Stuff Scout one-shot bug, 2 buried primary actions |
+| 🟢 Medium | 7 | Mock data (2), unwired data (3), orphaned code (2) |
+| ⚪ Low | 3 | Platform parity gap, superseded sheet cases, unwired rating |
 
 ## Usage in Other Projects
 
@@ -221,3 +219,32 @@ Re-run this audit when:
 - Adding new sections or navigation destinations
 - Refactoring sheet management
 - User reports "I can't find X" issues
+
+---
+
+## Cautionary Note: AI-Powered Audit Plugins
+
+**Plugins like `workflow-audit` are tools, not oracles.**
+
+These plugins systematically scan your codebase using pattern matching and heuristics. They can surface real issues you'd miss manually — but they have inherent limitations:
+
+**What they're good at:**
+- Finding structural inconsistencies (orphaned code, missing handlers, type mismatches)
+- Catching patterns that compile but fail silently at runtime
+- Enforcing consistency across platforms (iOS vs macOS parity)
+- Providing a repeatable, systematic checklist
+
+**What they can miss:**
+- Business logic correctness — a plugin can verify a button exists, not that it does the right thing
+- User experience nuance — "buried" is a judgment call that depends on content height, screen size, and context
+- False positives — code flagged as "orphaned" may be intentionally retained for future use
+- False negatives — novel bug patterns not covered by existing checks won't be detected
+
+**How to use them responsibly:**
+- Treat findings as leads to investigate, not verdicts to act on blindly
+- Verify critical findings manually before committing fixes
+- Expect the plugin to evolve — today's 14 checks won't catch tomorrow's new patterns
+- Don't assume a clean audit means zero issues; it means zero *known-pattern* issues
+- Review the skill's detection patterns periodically to understand what it actually checks vs what you assume it checks
+
+**Bottom line:** An audit plugin replaces neither testing nor human review. It's a force multiplier for the reviewer, not a replacement.

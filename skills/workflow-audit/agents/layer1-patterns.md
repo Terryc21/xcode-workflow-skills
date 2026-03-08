@@ -6,7 +6,7 @@ Layer 1 scans the codebase for UI entry points - places where users can trigger 
 
 ## SwiftUI Entry Point Patterns
 
-### 1. Promotion Cards (HIGH VALUE)
+### 1. Promotion Cards (HIGH VALUE — may be absent)
 Feature discovery cards on dashboard. These are prime workflow audit targets.
 
 ```regex
@@ -18,7 +18,7 @@ CompactPromotionCard\s*\(
 PromotionCard\s*\([\s\S]*?title:\s*"([^"]+)"
 ```
 
-**Discovered:** 7 cards in `DashboardView+PromotionCards.swift`
+**Note:** This pattern may return 0 matches if promotion cards have been removed from the codebase. This is expected — report as "Pattern no longer present (0 matches)" rather than silently skipping.
 
 ### 2. Sheet Triggers (HIGH VALUE)
 Central sheet management via enum. Best pattern for auditing.
@@ -75,11 +75,21 @@ ToolbarItem[\s\S]*Button
 
 **Recommendation:** Read toolbar-heavy files directly in Layer 2.
 
+## Zero-Match Handling
+
+When a scanned pattern returns 0 results, do NOT silently skip it. Instead:
+
+1. **Report it** in the Layer 1 inventory: `"<PatternName>: 0 matches — pattern no longer present in codebase"`
+2. **Check if the pattern was recently removed** (git log for deleted files matching the pattern name)
+3. **Update the discovery count** — if a pattern previously found N items and now finds 0, this signals a codebase change worth noting
+
+This prevents confusion in the audit output where a category appears to be "clean" when it was actually never scanned.
+
 ## Pattern Effectiveness
 
 | Pattern | Files Found | Noise Level | Recommendation |
 |---------|-------------|-------------|----------------|
-| PromotionCard | 1 | Very Low | ✅ Use |
+| PromotionCard | 0-1 | Very Low | ✅ Use (report 0 if absent) |
 | activeSheet = | 70+ | Low | ✅ Use |
 | .contextMenu | 12 | Low | ✅ Use |
 | .swipeActions | 9 | Low | ✅ Use |
