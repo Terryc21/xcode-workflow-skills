@@ -221,6 +221,8 @@ Compare current codebase against the previous audit to show what changed:
 
 > **CRITICAL FORMATTING RULE:** The Issue Rating Table below IS the output. Do NOT create separate sections for "Critical Issues", "Data Wiring Issues", "Recommendations", or any other vertical breakdown of findings. Every finding — navigation issues, data wiring issues, orphaned code, missing feedback, design violations — goes into ONE table as ONE row. Context goes in the Finding column. No exceptions.
 
+Before rendering, check terminal width with `tput cols`. If under 160 columns, use the compact 4-column table inline (# / Finding / Urgency / Fix Effort) and write the full 8-column table to the report file only. See `skills/shared/rating-system.md` Display Requirements for details.
+
 After completing the audit, provide:
 
 1. **One-line summary** — entry point count, issue count by severity (one sentence, not a section)
@@ -249,7 +251,7 @@ Use the Issue Rating scale:
 - **Risk: Fix:** Risk of the fix introducing regressions
 - **Risk: No Fix:** User-facing consequence of leaving the issue
 - **ROI:** 🟠 Excellent · 🟢 Good · 🟡 Marginal · 🔴 Poor
-- **Blast Radius:** How many files/entry points are affected
+- **Blast Radius:** Number of files the fix touches (e.g., "⚪ 1 file", "🟢 3 files", "🟡 12 files"). Count by grepping for callers/references before rating.
 - **Fix Effort:** Trivial / Small / Medium / Large
 
 ### End-of-Audit Suggestion

@@ -47,7 +47,35 @@ The table format lets you compare all findings at a glance. The vertical list fo
 
 ## Display Requirements
 
-> **Terminal width:** The 8-column rating table requires a wide terminal to render correctly. If the table appears as vertical blocks instead of horizontal rows, widen your terminal window or use full-screen mode.
+### Terminal Width Detection
+
+Before rendering any rating table, check terminal width:
+
+```bash
+tput cols
+```
+
+- **160+ columns:** Render the **full 8-column table** inline.
+- **Under 160 columns:** Render the **compact 4-column table** inline. Write the **full 8-column table** to the report file only. Display this notice after the compact table:
+
+> **Compact view** — your terminal is [N] columns wide (160+ needed for full table). The complete Issue Rating Table with all 8 columns has been written to the report file. Open that file or widen your terminal to 160+ columns to view it as a single table.
+
+### Compact Table Format
+
+When terminal is under 160 columns, use this inline:
+
+```markdown
+| # | Finding | Urgency | Fix Effort |
+|---|---------|---------|------------|
+| 1 | Description | 🔴 Critical | Trivial |
+| 2 | Description | 🟡 High | Small |
+```
+
+The compact table keeps the two most actionable columns (Urgency + Fix Effort). Full ratings are in the report file.
+
+### Report File
+
+The report file (`.agents/research/YYYY-MM-DD-*.md`) **always** contains the full 8-column table regardless of terminal width.
 
 ---
 
@@ -59,7 +87,7 @@ The table format lets you compare all findings at a glance. The vertical list fo
 | **Risk: Fix** | What could break when making the change |
 | **Risk: No Fix** | Cost of leaving it — crash, data loss, user-visible bug |
 | **ROI** | Return on effort (inverted — 🟠 = excellent, 🔴 = poor) |
-| **Blast Radius** | Files, views, tests, subsystems touched |
+| **Blast Radius** | Number of files the fix touches (e.g., "⚪ 1 file", "🟢 3 files", "🟡 12 files"). Count by grepping for callers/references before rating. |
 | **Fix Effort** | Trivial / Small / Medium / Large |
 
 ---
